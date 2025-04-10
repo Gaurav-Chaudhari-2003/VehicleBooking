@@ -18,9 +18,15 @@
 		}
 		$ip=$_SERVER['REMOTE_ADDR'];
         $geopluginURL = "http://www.geoplugin.net/php.gp?ip=$ip";
-        $addrDetailsArr = unserialize(file_get_contents($geopluginURL));
-        $city = $addrDetailsArr['geoplugin_city'];
-        $country = $addrDetailsArr['geoplugin_countryName'];
+        $addrDetailsArr = @unserialize(file_get_contents($geopluginURL));
+
+        if (!$addrDetailsArr) {
+            $city = 'Unknown City';
+            $country = 'Unknown Country';
+        } else {
+            $city = $addrDetailsArr['geoplugin_city'];
+            $country = $addrDetailsArr['geoplugin_countryName'];
+        }
 		
 		$qry1 = "insert into userLog(u_id, u_email, u_ip, u_city, u_country) values('$u_id','$u_email','$ip','$city','$country')";
 		//echo $qry1; 
@@ -33,45 +39,6 @@
 			  #echo "<script type='text/javascript'>alert('Access Denied Please Check Your Credentials')</script>";
 			  $error = "Access Denied Please Check Your Credentials";
 		 }
-	  /*
-		
-      $stmt=$mysqli->prepare("SELECT u_email, u_pwd, u_id FROM tms_user WHERE u_email=? and u_pwd=? ");//sql to log in user
-      $stmt->bind_param('ss',$u_email,$u_pwd);//bind fetched parameters
-      $stmt->execute();//execute bind
-      $stmt -> bind_result($u_email,$u_pwd,$u_id);//bind result
-      $rs=$stmt->fetch();
-      $_SESSION['u_id']=$u_id;//assaign session to user id
-      $_SESSION['login']=$u_email;
-      $uip=$_SERVER['REMOTE_ADDR'];
-      $ldate=date('d/m/Y h:i:s', time());
-      if($rs)
-      {//get user logs
-		$UserLog = "some_value";
-		$uid=$_SESSION['u_id'];
-        $uemail=$_SESSION['login'];
-        $ip=$_SERVER['REMOTE_ADDR'];
-        $geopluginURL='http://www.geoplugin.net/php.gp?ip='.$ip;
-        $addrDetailsArr = unserialize(file_get_contents($geopluginURL));
-        $city = $addrDetailsArr['geoplugin_city'];
-        $country = $addrDetailsArr['geoplugin_countryName'];
-        /$log="insert into userLog(u_id, u_email, u_ip, u_city, u_country) values('$uid','$uemail','$ip','$city','$country')";
-		//echo $log;
-        //$mysqli->query($log);
-		*/
-		
-		/*
-        if($row_que2)
-        {
-         header("location:user-dashboard.php");
-         }
-        }
-      else
-      {
-      #echo "<script>alert('Access Denied Please Check Your Credentials');</script>";
-      $error = "Access Denied Please Check Your Credentials";
-      }
-	  */
-	  
   }
 ?>
 <!--End Server Side Script Injection-->

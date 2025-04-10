@@ -165,6 +165,20 @@ INSERT INTO `tms_vehicle` (`v_id`, `v_name`, `v_reg_no`, `v_pass_no`, `v_driver`
 -- Indexes for dumped tables
 --
 
+
+CREATE TABLE `userlog` (
+                           `log_id` INT(20) NOT NULL AUTO_INCREMENT,
+                           `u_id` INT(20) NOT NULL,
+                           `u_email` VARCHAR(200) NOT NULL,
+                           `u_ip` VARCHAR(200) NOT NULL,
+                           `u_city` VARCHAR(200) NOT NULL,
+                           `u_country` VARCHAR(200) NOT NULL,
+                           `log_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                           PRIMARY KEY (`log_id`)
+)ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+
+
 --
 -- Indexes for table `tms_admin`
 --

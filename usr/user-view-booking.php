@@ -54,8 +54,8 @@
                 <tbody>
                 <?php
                     $aid=$_SESSION['u_id'];
-                    $ret="SELECT * from tms_user where u_id=? ";
-                    $stmt= $mysqli->prepare($ret) ;
+                $ret = "SELECT * FROM tms_user WHERE u_id=? AND (u_car_book_status IS NOT NULL AND u_car_book_status != '')";
+                $stmt= $mysqli->prepare($ret) ;
                     $stmt->bind_param('i',$aid);
                     $stmt->execute() ;//ok
                     $res=$stmt->get_result();

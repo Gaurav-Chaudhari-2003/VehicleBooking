@@ -1,35 +1,49 @@
 <?php
-  session_start();
-  include('vendor/inc/config.php');
-  include('vendor/inc/checklogin.php');
-  check_login();
-  $aid=$_SESSION['a_id'];
-  //Add Booking
-  if(isset($_POST['approve_booking']))
-    {
-            $u_id = $_GET['u_id'];
-            //$u_fname=$_POST['u_fname'];
-            //$u_lname = $_POST['u_lname'];
-            //$u_phone=$_POST['u_phone'];
-            //$u_addr=$_POST['u_addr'];
-            //$u_car_type = $_POST['u_car_type'];
-           //$u_car_regno  = $_POST['u_car_regno'];
-            //$u_car_bookdate = $_POST['u_car_bookdate'];
-            $u_car_book_status  = $_POST['u_car_book_status'];
-            $query="update tms_user set  u_car_book_status=? where u_id=?";
-            $stmt = $mysqli->prepare($query);
-            $rc=$stmt->bind_param('si',  $u_car_book_status, $u_id);
-            $stmt->execute();
-                if($stmt)
-                {
-                    $succ = "Booking Approved";
-                }
-                else 
-                {
-                    $err = "Please Try Again Later";
-                }
+global $mysqli;
+session_start();
+include('vendor/inc/config.php');
+include('vendor/inc/checklogin.php');
+check_login();
+$aid = $_SESSION['a_id'];
+
+// Approve Booking
+if (isset($_POST['approve_booking'])) {
+    $u_id = $_GET['u_id'];
+    $u_car_book_status = $_POST['u_car_book_status'];
+
+    // Step 1: Update booking status
+    $query = "UPDATE tms_user SET u_car_book_status=? WHERE u_id=?";
+    $stmt = $mysqli->prepare($query);
+    $stmt->bind_param('si', $u_car_book_status, $u_id);
+    $stmt->execute();
+
+    if ($stmt) {
+        // Step 2: If approved, update the vehicle status to 'Booked'
+        if ($u_car_book_status == 'Approved') {
+            // Get the vehicle registration number
+            $carQuery = "SELECT u_car_regno FROM tms_user WHERE u_id=?";
+            $carStmt = $mysqli->prepare($carQuery);
+            $carStmt->bind_param("i", $u_id);
+            $carStmt->execute();
+            $carResult = $carStmt->get_result();
+            if ($carRow = $carResult->fetch_assoc()) {
+                $carRegNo = $carRow['u_car_regno'];
+
+                // Update vehicle status in vehicle table
+                $updateVehicle = "UPDATE tms_vehicle SET v_status='Booked' WHERE v_reg_no=?";
+                $stmtUpdate = $mysqli->prepare($updateVehicle);
+                $stmtUpdate->bind_param("s", $carRegNo);
+                $stmtUpdate->execute();
             }
+        }
+
+        $succ = "Booking Approved & Vehicle marked as Booked.";
+    } else {
+        $err = "Please Try Again Later";
+    }
+}
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -121,17 +135,23 @@
             
             <div class="form-group">
                 <label for="exampleInputEmail1">Email address</label>
-                <input type="email" readonly value="<?php echo $row->u_email;?>" class="form-control" name="u_email"">
+                <label>
+                    <input type="email" readonly value="<?php echo $row->u_email;?>" class="form-control" name="u_email"
+                </label>">
             </div>
 
             <div class="form-group">
                 <label for="exampleInputEmail1">Vehicle Category</label>
-                <input type="email" readonly value="<?php echo $row->u_car_type;?>" class="form-control" name="u_car_type">
+                <label>
+                    <input type="email" readonly value="<?php echo $row->u_car_type;?>" class="form-control" name="u_car_type">
+                </label>
             </div>
 
             <div class="form-group">
                 <label for="exampleInputEmail1">Vehicle Registration NUmber</label>
-                <input type="email" readonly value="<?php echo $row->u_car_regno;?>" class="form-control" name="u_car_category">
+                <label>
+                    <input type="email" readonly value="<?php echo $row->u_car_regno;?>" class="form-control" name="u_car_category">
+                </label>
             </div>
 
         
@@ -199,7 +219,7 @@
   <script src="vendor/jquery-easing/jquery.easing.min.js"></script>
 
   <!-- Page level plugin JavaScript-->
-  <script src="vendor/chart.js/Chart.min.js"></script>
+<!--  <script src="vendor/chart.js/Chart.min.js"></script>-->
   <script src="vendor/datatables/jquery.dataTables.js"></script>
   <script src="vendor/datatables/dataTables.bootstrap4.js"></script>
 
