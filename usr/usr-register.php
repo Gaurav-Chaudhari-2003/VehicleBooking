@@ -85,7 +85,7 @@
             <div class="form-row">
               <div class="col-md-4">
                 <div class="form-label-group">
-                <input type="text" required class="form-control" id="exampleInputEmail1" name="u_fname">
+                    <label for="exampleInputEmail1"></label><input type="text" required class="form-control" id="exampleInputEmail1" name="u_fname">
                   <label for="firstName">First name</label>
                 </div>
               </div>
@@ -136,7 +136,7 @@
         </form>
         <!--End FOrm-->
         <div class="text-center">
-          <a class="d-block small mt-3" href="index.php">Login Page</a>
+          <a class="d-block small mt-3" href="user-login.php">Login Page</a>
           <a class="d-block small" href="usr-forgot-pwd.php">Forgot Password?</a>
         </div>
         

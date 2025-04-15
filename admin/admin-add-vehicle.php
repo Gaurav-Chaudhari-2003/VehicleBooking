@@ -1,205 +1,218 @@
 <?php
-  session_start();
-  include('vendor/inc/config.php');
-  include('vendor/inc/checklogin.php');
-  check_login();
-  $aid=$_SESSION['a_id'];
-  //Add USer
-  if(isset($_POST['add_veh']))
-    {
+global $mysqli;
+session_start();
+include('vendor/inc/config.php');
+include('vendor/inc/checklogin.php');
+check_login();
+$aid = $_SESSION['a_id'];
 
-            $v_name=$_POST['v_name'];
-            $v_reg_no = $_POST['v_reg_no'];
-            $v_category=$_POST['v_category'];
-            $v_pass_no=$_POST['v_pass_no'];
-            $v_status=$_POST['v_status'];
-            $v_driver=$_POST['v_driver'];
-            $v_dpic=$_FILES["v_dpic"]["name"];
-		        move_uploaded_file($_FILES["v_dpic"]["tmp_name"],"../vendor/img/".$_FILES["v_dpic"]["name"]);
-            $query="insert into tms_vehicle (v_name, v_pass_no, v_reg_no, v_driver, v_category, v_dpic, v_status ) values(?,?,?,?,?,?,?)";
-            $stmt = $mysqli->prepare($query);
-            $rc=$stmt->bind_param('sssssss', $v_name, $v_pass_no, $v_reg_no, $v_driver, $v_category, $v_dpic, $v_status);
-            $stmt->execute();
-                if($stmt)
-                {
-                    $succ = "Vehicle Added";
-                }
-                else 
-                {
-                    $err = "Please Try Again Later";
-                }
-            }
+$succ = $err = "";
+
+// Add Vehicle
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_veh'])) {
+    $v_name     = $_POST['v_name'];
+    $v_reg_no   = $_POST['v_reg_no'];
+    $v_category = $_POST['v_category'];
+    $v_pass_no  = $_POST['v_pass_no'];
+    $v_status   = $_POST['v_status'];
+    $v_driver   = $_POST['v_driver'];
+
+    // Image Upload Logic
+    $v_dpic = 'placeholder.png'; // default
+    if (isset($_FILES["v_dpic"]) && $_FILES["v_dpic"]["error"] === 0) {
+        $check = getimagesize($_FILES["v_dpic"]["tmp_name"]);
+        if ($check !== false) {
+            $target_dir = "../vendor/img/";
+            $v_dpic = basename($_FILES["v_dpic"]["name"]);
+            $target_file = $target_dir . $v_dpic;
+            move_uploaded_file($_FILES["v_dpic"]["tmp_name"], $target_file);
+        }
+    }
+
+    $query = "INSERT INTO tms_vehicle (v_name, v_pass_no, v_reg_no, v_driver, v_category, v_dpic, v_status) 
+              VALUES (?, ?, ?, ?, ?, ?, ?)";
+    $stmt = $mysqli->prepare($query);
+    $stmt->bind_param('sssssss', $v_name, $v_pass_no, $v_reg_no, $v_driver, $v_category, $v_dpic, $v_status);
+
+    if ($stmt->execute()) {
+        $_SESSION['succ'] = "Vehicle Added Successfully";
+        header("Location: " . $_SERVER['PHP_SELF']);
+        exit();
+    } else {
+        $_SESSION['err'] = "Please Try Again Later";
+        header("Location: " . $_SERVER['PHP_SELF']);
+        exit();
+    }
+}
+
+// Load messages from session and clear them
+if (isset($_SESSION['succ'])) {
+    $succ = $_SESSION['succ'];
+    unset($_SESSION['succ']);
+}
+if (isset($_SESSION['err'])) {
+    $err = $_SESSION['err'];
+    unset($_SESSION['err']);
+}
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
-
 <?php include('vendor/inc/head.php');?>
 
 <body id="page-top">
- <!--Start Navigation Bar-->
-  <?php include("vendor/inc/nav.php");?>
-  <!--Navigation Bar-->
 
-  <div id="wrapper">
+<!-- Navigation -->
+<?php include("vendor/inc/nav.php");?>
+
+<div id="wrapper">
 
     <!-- Sidebar -->
     <?php include("vendor/inc/sidebar.php");?>
-    <!--End Sidebar-->
+
     <div id="content-wrapper">
+        <div class="container-fluid">
+            <?php if ($succ): ?>
+                <script>
+                    setTimeout(function () {
+                        swal("Success!", "<?php echo $succ; ?>", "success");
+                    }, 100);
+                </script>
+            <?php endif; ?>
 
-      <div class="container-fluid">
-      <?php if(isset($succ)) {?>
-                        <!--This code for injecting an alert-->
-        <script>
-                    setTimeout(function () 
-                    { 
-                        swal("Success!","<?php echo $succ;?>!","success");
-                    },
-                        100);
-        </script>
+            <?php if ($err): ?>
+                <script>
+                    setTimeout(function () {
+                        swal("Failed!", "<?php echo $err; ?>", "error");
+                    }, 100);
+                </script>
+            <?php endif; ?>
 
-        <?php } ?>
-        <?php if(isset($err)) {?>
-        <!--This code for injecting an alert-->
-        <script>
-                    setTimeout(function () 
-                    { 
-                        swal("Failed!","<?php echo $err;?>!","Failed");
-                    },
-                        100);
-        </script>
+            <!-- Breadcrumbs-->
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="#">Vehicles</a></li>
+                <li class="breadcrumb-item active">Add Vehicle</li>
+            </ol>
 
-        <?php } ?>
+            <div class="card">
+                <div class="card-header">Add Vehicle</div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="form-group">
+                            <label for="v_name">Vehicle Name</label>
+                            <input type="text" required class="form-control" id="v_name" name="v_name">
+                        </div>
 
-        <!-- Breadcrumbs-->
-        <ol class="breadcrumb">
-          <li class="breadcrumb-item">
-            <a href="#">Vehicles</a>
-          </li>
-          <li class="breadcrumb-item active">Add Vehicle</li>
-        </ol>
-        <hr>
-        <div class="card">
-        <div class="card-header">
-          Add Vehicle
+                        <div class="form-group">
+                            <label for="v_reg_no">Vehicle Registration Number</label>
+                            <input type="text" class="form-control" id="v_reg_no" name="v_reg_no">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="v_pass_no">Number of Seats</label>
+                            <input type="number" min="1" class="form-control" id="v_pass_no" name="v_pass_no">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="v_driver">Driver</label>
+                            <select class="form-control" name="v_driver" id="v_driver">
+                                <?php
+                                $ret = "SELECT * FROM tms_user WHERE u_category = 'Driver'";
+                                $stmt = $mysqli->prepare($ret);
+                                $stmt->execute();
+                                $res = $stmt->get_result();
+                                while ($row = $res->fetch_object()) {
+                                    echo "<option>{$row->u_fname} {$row->u_lname}</option>";
+                                }
+                                ?>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="v_category">Vehicle Category</label>
+                            <select class="form-control" name="v_category" id="v_category">
+                                <option>Sedan</option>
+                                <option>SUV</option>
+                                <option>Truck</option>
+                                <option>Van</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="v_status">Vehicle Status</label>
+                            <select class="form-control" name="v_status" id="v_status">
+                                <option>Available</option>
+                                <option>Booked</option>
+                                <option>Maintenance</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="v_dpic">Vehicle Picture</label>
+                            <input type="file" class="form-control" id="v_dpic" name="v_dpic" accept="image/*" onchange="previewImage(event)">
+                            <br>
+                            <img id="imagePreview" src="vendor/img/placeholder.png" alt="Image Preview" style="max-width: 400px; border-radius: 8px; display: none;" />
+                        </div>
+
+                        <button type="submit" name="add_veh" class="btn btn-success">Add Vehicle</button>
+                    </form>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-          <!--Add User Form-->
-          <form method ="POST" enctype="multipart/form-data"> 
-            <div class="form-group">
-                <label for="exampleInputEmail1">Vehicle Name</label>
-                <input type="text" required class="form-control" id="exampleInputEmail1" name="v_name">
-            </div>
-            <div class="form-group">
-                <label for="exampleInputEmail1">Vehicle Registration Number</label>
-                <input type="text" class="form-control" id="exampleInputEmail1" name="v_reg_no">
-            </div>
-            <div class="form-group">
-                <label for="exampleInputEmail1">Vehicle  Number Of Seats</label>
-                <input type="text" class="form-control" id="exampleInputEmail1" name="v_pass_no">
-            </div>
-            <div class="form-group">
-              <label for="exampleFormControlSelect1">Driver</label>
-              <select class="form-control" name="v_driver" id="exampleFormControlSelect1">
-                <?php
 
-                $ret="SELECT * FROM tms_user where u_category = 'Driver' "; //sql code to get to ten trains randomly
-                $stmt= $mysqli->prepare($ret) ;
-                $stmt->execute() ;//ok
-                $res=$stmt->get_result();
-                $cnt=1;
-                while($row=$res->fetch_object())
-                {
-                ?>
-                <option><?php echo $row->u_fname;?> <?php echo $row->u_lname;?></option>
-                <?php }?> 
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="exampleFormControlSelect1">Vehicle Category</label>
-              <select class="form-control" name="v_category" id="exampleFormControlSelect1">
-                <option>Sedan</option>
-                <option>SUV</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="exampleFormControlSelect1">Vehicle Status</label>
-              <select class="form-control" name="v_status" id="exampleFormControlSelect1">
-                <option>Booked</option>
-                <option>Available</option>
-              </select>
-            </div>
-
-            <div class="form-group col-md-12">
-                <label for="exampleInputEmail1">Vehicle Picture</label>
-                <input type="file" class="btn btn-success" id="exampleInputEmail1" name="v_dpic">
-            </div>
-
-            <button type="submit" name="add_veh" class="btn btn-success">Add Vehicle</button>
-          </form>
-          <!-- End Form-->
-        </div>
-      </div>
-       
-      <hr>
-     
-
-      <!-- Sticky Footer -->
-      <?php include("vendor/inc/footer.php");?>
-
+        <!-- Footer -->
+        <?php include("vendor/inc/footer.php");?>
     </div>
-    <!-- /.content-wrapper -->
+</div>
 
-  </div>
-  <!-- /#wrapper -->
-
-  <!-- Scroll to Top Button-->
-  <a class="scroll-to-top rounded" href="#page-top">
+<!-- Scroll to Top Button-->
+<a class="scroll-to-top rounded" href="#page-top">
     <i class="fas fa-angle-up"></i>
-  </a>
+</a>
 
-  <!-- Logout Modal-->
-  <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+<!-- Logout Modal-->
+<div class="modal fade" id="logoutModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="exampleModalLabel">Ready to Leave?</h5>
-          <button class="close" type="button" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">×</span>
-          </button>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ready to Leave?</h5>
+                <button class="close" type="button" data-dismiss="modal"><span>×</span></button>
+            </div>
+            <div class="modal-body">Select "Logout" below to end your current session.</div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
+                <a class="btn btn-danger" href="admin-logout.php">Logout</a>
+            </div>
         </div>
-        <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
-          <a class="btn btn-danger" href="admin-logout.php">Logout</a>
-        </div>
-      </div>
     </div>
-  </div>
+</div>
 
-  <!-- Bootstrap core JavaScript-->
-  <script src="vendor/jquery/jquery.min.js"></script>
-  <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<!-- Scripts -->
+<script src="vendor/jquery/jquery.min.js"></script>
+<script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="vendor/jquery-easing/jquery.easing.min.js"></script>
+<script src="vendor/chart.js/Chart.min.js"></script>
+<script src="vendor/datatables/jquery.dataTables.js"></script>
+<script src="vendor/datatables/dataTables.bootstrap4.js"></script>
+<script src="vendor/js/sb-admin.min.js"></script>
+<script src="vendor/js/demo/datatables-demo.js"></script>
+<script src="vendor/js/demo/chart-area-demo.js"></script>
+<script src="vendor/js/swal.js"></script>
+<script>
+    function previewImage(event) {
+        const input = event.target;
+        const preview = document.getElementById('imagePreview');
 
-  <!-- Core plugin JavaScript-->
-  <script src="vendor/jquery-easing/jquery.easing.min.js"></script>
-
-  <!-- Page level plugin JavaScript-->
-  <script src="vendor/chart.js/Chart.min.js"></script>
-  <script src="vendor/datatables/jquery.dataTables.js"></script>
-  <script src="vendor/datatables/dataTables.bootstrap4.js"></script>
-
-  <!-- Custom scripts for all pages-->
-  <script src="vendor/js/sb-admin.min.js"></script>
-
-  <!-- Demo scripts for this page-->
-  <script src="vendor/js/demo/datatables-demo.js"></script>
-  <script src="vendor/js/demo/chart-area-demo.js"></script>
- <!--INject Sweet alert js-->
- <script src="vendor/js/swal.js"></script>
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+</script>
 
 </body>
-
 </html>

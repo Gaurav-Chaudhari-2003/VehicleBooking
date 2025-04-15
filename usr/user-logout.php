@@ -3,6 +3,6 @@
     unset($_SESSION['u_id']);
     session_destroy();
 
-    header("Location: index.php");
+    header("Location: user-login.php");
     exit;
 ?>

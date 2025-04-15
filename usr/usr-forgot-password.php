@@ -41,7 +41,7 @@
         </form>
 
         <div class="text-center">
-          <a class="d-block small" href="index.php">Login Page</a>
+          <a class="d-block small" href="user-login.php">Login Page</a>
         </div>
       </div>
     </div>
