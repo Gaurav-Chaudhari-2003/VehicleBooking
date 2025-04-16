@@ -23,7 +23,7 @@
             </a>
             <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownBlog">
               <a class="dropdown-item" href="admin/">Admin Login</a>
-              <a class="dropdown-item" href="usr/">Client Login</a>
+              <a class="dropdown-item" href="usr/user-login.php">Client Login</a>
             </div>
           </li>
         </ul>

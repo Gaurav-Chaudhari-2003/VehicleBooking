@@ -137,7 +137,7 @@
         <!--End FOrm-->
         <div class="text-center">
           <a class="d-block small mt-3" href="user-login.php">Login Page</a>
-          <a class="d-block small" href="usr-forgot-pwd.php">Forgot Password?</a>
+          <a class="d-block small" href="profile/usr-forgot-pwd.php">Forgot Password?</a>
         </div>
         
       </div>

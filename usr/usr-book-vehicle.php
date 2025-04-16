@@ -1,139 +1,148 @@
 <?php
+// Assumes session and DB are already initialized
 global $mysqli;
-session_start();
-include('vendor/inc/config.php');
-include('vendor/inc/checklogin.php');
-check_login();
-$aid = $_SESSION['u_id'];
-
-// Dynamic base URL to fix relative paths
 $baseURL = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/') . '/';
 $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+$aid = $_SESSION['u_id'];
 ?>
-<!DOCTYPE html>
-<html lang="en">
 
-<?php include('vendor/inc/head.php'); ?>
+<?php if (isset($_SESSION['msg'])): ?>
+    <script>
+        setTimeout(function () {
+            swal("Info", "<?php echo $_SESSION['msg']; ?>", "info");
+        }, 100);
+    </script>
+    <?php unset($_SESSION['msg']); ?>
+<?php endif; ?>
 
-<body id="page-top">
-<?php include('vendor/inc/nav.php'); ?>
 
-<div id="wrapper">
-    <?php include('vendor/inc/sidebar.php'); ?>
-
-    <div id="content-wrapper">
-        <div class="container-fluid">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="user-dashboard.php">Dashboard</a></li>
-                <li class="breadcrumb-item">Vehicle</li>
-                <li class="breadcrumb-item active">Book Vehicle</li>
-            </ol>
-
-            <div class="card mb-3">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <div><i class="fas fa-bus"></i> Available Vehicles</div>
-                    <div>
-                        <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search vehicles...">
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-3">
-                            <label for="seatFilter"></label><select id="seatFilter" class="form-control">
-                                <option value="">Filter by Seats</option>
-                                <?php
-                                $seatQuery = "SELECT DISTINCT v_pass_no FROM tms_vehicle WHERE v_status = 'Available' ORDER BY v_pass_no ASC";
-                                $seatStmt = $mysqli->prepare($seatQuery);
-                                $seatStmt->execute();
-                                $seatResult = $seatStmt->get_result();
-                                while ($seatRow = $seatResult->fetch_object()) {
-                                    echo '<option value="' . $seatRow->v_pass_no . '">' . $seatRow->v_pass_no . '</option>';
-                                }
-                                ?>
-                            </select>
-
-                        </div>
-                        <div class="col-md-3">
-                            <label for="driverFilter"></label><input type="text" id="driverFilter" class="form-control" placeholder="Filter by Driver">
-                        </div>
-                    </div>
-
-                    <div class="row" id="vehicleCards">
-                        <?php
-                        $ret = "SELECT * FROM tms_vehicle WHERE v_status = 'Available'";
-                        $stmt = $mysqli->prepare($ret);
-                        $stmt->execute();
-                        $res = $stmt->get_result();
-                        while ($row = $res->fetch_object()) {
-                            $imagePath = $projectFolder . 'vendor/img/' . ($row->v_dpic ? $row->v_dpic : 'placeholder.png');
-                            ?>
-                            <div class="col-md-4 mb-4 vehicle-card"
-                                 data-name="<?php echo strtolower($row->v_name); ?>"
-                                 data-reg="<?php echo strtolower($row->v_reg_no); ?>"
-                                 data-seats="<?php echo $row->v_pass_no; ?>"
-                                 data-driver="<?php echo strtolower($row->v_driver); ?>">
-                                <div class="card h-100">
-                                    <img src="<?php echo $imagePath; ?>" class="card-img-top vehicle-img enlargeable" alt="<?php echo $row->v_name; ?>" data-full="<?php echo $imagePath; ?>">
-
-                                    <div class="card-body">
-                                        <h5 class="card-title"><?php echo $row->v_name; ?></h5>
-                                        <p class="card-text">
-                                            <strong>Reg No:</strong> <?php echo $row->v_reg_no; ?><br>
-                                            <strong>Seats:</strong> <?php echo $row->v_pass_no; ?><br>
-                                            <strong>Driver:</strong> <?php echo $row->v_driver; ?>
-                                        </p>
-                                        <a href="user-confirm-booking.php?v_id=<?php echo $row->v_id; ?>" class="btn btn-outline-success btn-block">
-                                            <i class="fa fa-clipboard"></i> Book Vehicle
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        <?php } ?>
-                    </div>
-                </div>
-                <div class="card-footer small text-muted">
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center bg-info text-white">
+        <div><i class="fas fa-bus"></i> Available Vehicles</div>
+        <div>
+            <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search vehicles...">
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <select id="seatFilter" class="form-control">
+                    <option value="">Filter by Seats</option>
                     <?php
-                    date_default_timezone_set("Asia/Kolkata");
-                    echo "Generated At : " . date("h:i:sa");
+                    $seatQuery = "SELECT DISTINCT v_pass_no FROM tms_vehicle WHERE v_status = 'Available' ORDER BY v_pass_no ASC";
+                    $seatStmt = $mysqli->prepare($seatQuery);
+                    $seatStmt->execute();
+                    $seatResult = $seatStmt->get_result();
+                    while ($seatRow = $seatResult->fetch_object()) {
+                        echo '<option value="' . $seatRow->v_pass_no . '">' . $seatRow->v_pass_no . '</option>';
+                    }
                     ?>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input type="text" id="driverFilter" class="form-control" placeholder="Filter by Driver">
+            </div>
+        </div>
+
+
+
+
+
+        <div class="row" id="vehicleCards">
+            <?php
+            $ret = "SELECT * FROM tms_vehicle WHERE v_status = 'Available'";
+            $stmt = $mysqli->prepare($ret);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            while ($row = $res->fetch_object()) {
+                $imagePath = $projectFolder . 'vendor/img/' . ($row->v_dpic ? $row->v_dpic : 'placeholder.png');
+                ?>
+
+
+                <!-- Booking Confirmation Modal -->
+                <div class="modal fade" id="bookModal<?php echo $row->v_id; ?>" tabindex="-1" aria-labelledby="bookModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <form method="POST" action="user-confirm-booking.php">
+                                <div class="modal-header bg-warning text-dark">
+                                    <h5 class="modal-title" id="bookModalLabel">
+                                        Confirm Vehicle Booking
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p><strong>Category:</strong> <?php echo $row->v_category; ?></p>
+                                    <p><strong>Reg. No:</strong> <?php echo $row->v_reg_no; ?></p>
+                                    <p><strong>Booking Date:</strong></p>
+                                    <input type="date" name="u_car_bookdate" class="form-control mb-2" required>
+
+                                    <input type="hidden" name="v_id" value="<?php echo $row->v_id; ?>">
+                                    <input type="hidden" name="u_car_type" value="<?php echo $row->v_category; ?>">
+                                    <input type="hidden" name="u_car_regno" value="<?php echo $row->v_reg_no; ?>">
+                                    <input type="hidden" name="u_car_book_status" value="Pending">
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" name="book_vehicle" class="btn btn-success">Confirm Booking</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
 
-        <?php include("vendor/inc/footer.php"); ?>
+
+
+
+                <div class="col-md-4 mb-4 vehicle-card"
+                     data-name="<?php echo strtolower($row->v_name); ?>"
+                     data-reg="<?php echo strtolower($row->v_reg_no); ?>"
+                     data-seats="<?php echo $row->v_pass_no; ?>"
+                     data-driver="<?php echo strtolower($row->v_driver); ?>">
+                    <div class="card h-100">
+                        <img src="<?php echo $imagePath; ?>" class="card-img-top vehicle-img enlargeable" alt="<?php echo $row->v_name; ?>" data-full="<?php echo $imagePath; ?>">
+
+                        <div class="card-body">
+                            <h5 class="card-title"><?php echo $row->v_name; ?></h5>
+                            <p class="card-text">
+                                <strong>Reg No:</strong> <?php echo $row->v_reg_no; ?><br>
+                                <strong>Seats:</strong> <?php echo $row->v_pass_no; ?><br>
+                                <strong>Driver:</strong> <?php echo $row->v_driver; ?>
+                            </p>
+                            <!-- Book Vehicle Button triggers modal -->
+                            <button type="button"
+                                    class="btn btn-outline-success btn-block"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#bookModal<?php echo $row->v_id; ?>">
+                                <i class="fa fa-clipboard"></i> Book Vehicle
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            <?php } ?>
+        </div>
     </div>
 </div>
 
-<a class="scroll-to-top rounded" href="#page-top">
-    <i class="fas fa-angle-up"></i>
-</a>
-
-<!-- Logout Modal-->
-<div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="exampleModalLabel">Ready to Leave?</h5>
-                <button class="close" type="button" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">×</span>
-                </button>
-            </div>
-            <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
-                <a class="btn btn-danger" href="user-logout.php">Logout</a>
+<!-- Image Modal for zooming -->
+<div class="modal fade" id="imageModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
+        <div class="modal-content bg-transparent border-0">
+            <div class="modal-body p-0 text-center">
+                <img src="" id="modalImage" class="img-fluid w-100" style="max-height: 90vh; object-fit: contain;">
             </div>
         </div>
     </div>
 </div>
 
-<!-- Scripts (relative to baseURL) -->
-<script src="<?php echo $baseURL; ?>vendor/jquery/jquery.min.js"></script>
-<script src="<?php echo $baseURL; ?>vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-<script src="<?php echo $baseURL; ?>vendor/jquery-easing/jquery.easing.min.js"></script>
-<script src="<?php echo $baseURL; ?>vendor/js/sb-admin.min.js"></script>
+<!-- Filter and Search Script -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
 
-<!-- Working Search + Filter Script -->
 <script>
     $(document).ready(function () {
         function filterVehicles() {
@@ -156,76 +165,12 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
         }
 
         $('#searchInput, #seatFilter, #driverFilter').on('input change', filterVehicles);
-    });
-</script>
 
-<script>
-    $(document).ready(function () {
-        // Existing filter logic ...
-
-        // Image click to show modal
+        // When an image inside .vehicle-card with class .enlargeable is clicked
         $('.vehicle-card').on('click', '.enlargeable', function () {
-            const imgSrc = $(this).data('full');
-            $('#modalImage').attr('src', imgSrc);
-            $('#imageModal').modal('show');
+            const imgSrc = $(this).data('full'); // Get the full image URL from data-full attribute
+            $('#modalImage').attr('src', imgSrc); // Set the src of the modal image to the full image URL
+            $('#imageModal').modal('show'); // Show the modal
         });
     });
 </script>
-
-
-<!-- Styling -->
-<style>
-    .vehicle-card img {
-        width: 100%;
-        height: 300px;
-        object-fit: cover;
-        border-radius: 8px;
-    }
-
-    .vehicle-card .card {
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .vehicle-card .card-body {
-        flex-grow: 1;
-    }
-
-    .vehicle-card .card-title {
-        font-size: 1.1rem;
-        font-weight: bold;
-    }
-
-    .vehicle-card .card-text {
-        font-size: 0.9rem;
-    }
-
-    .vehicle-card .btn {
-        margin-top: auto;
-    }
-</style>
-
-<style>
-    #modalImage {
-        border-radius: 10px;
-        box-shadow: 0 0 20px rgba(0,0,0,0.6);
-        transition: 0.3s ease-in-out;
-    }
-</style>
-
-
-<!-- Image Modal -->
-<div class="modal fade" id="imageModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
-        <div class="modal-content bg-transparent border-0">
-            <div class="modal-body p-0 text-center">
-                <img src="" id="modalImage" class="img-fluid w-100" style="max-height: 90vh; object-fit: contain;">
-            </div>
-        </div>
-    </div>
-</div>
-
-
-</body>
-</html>

@@ -30,7 +30,7 @@ if (isset($_POST['Usr-login'])) {
             $log_stmt->bind_param("issss", $user['u_id'], $u_email, $ip, $city, $country);
             $log_stmt->execute();
 
-            header("Location: usr-book-vehicle.php");
+            header("Location: user-dashboard.php");
             exit();
         } else {
             $error = "Invalid email or password.";
