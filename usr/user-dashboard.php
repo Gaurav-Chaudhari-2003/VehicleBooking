@@ -22,10 +22,6 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
         .card { border-radius: 1rem; }
         .vehicle-card img { height: 200px; object-fit: cover; border-radius: 10px 10px 0 0; }
         .vehicle-card .card { height: 100%; display: flex; flex-direction: column; }
-        .vehicle-card .card-body { flex-grow: 1; }
-        .vehicle-card .card-title { font-size: 1.1rem; font-weight: bold; }
-        .vehicle-card .card-text { font-size: 0.9rem; }
-        .vehicle-card .btn { margin-top: auto; }
     </style>
 </head>
 
@@ -36,39 +32,41 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
         <p class="text-muted">Welcome to the Vehicle Booking System</p>
     </div>
 
-    <!-- Dashboard Tiles -->
+    <!-- Dashboard Cards -->
     <div class="row g-4 dashboard-section">
-        <!-- Profile, Booking, and Other Navigation Cards -->
-        <div class="col-md-3">
-            <div class="card bg-primary text-white h-100">
+        <div class="col-md-4">
+            <div class="card card-hover bg-primary text-white h-100 shadow-sm">
                 <div class="card-body d-flex align-items-center justify-content-between">
-                    <div><i class="fas fa-user card-body-icon"></i> My Profile</div>
+                    <div><i class="fas fa-user card-body-icon"></i></div>
+                    <h5 class="mb-0">My Profile</h5>
                 </div>
-                <a href="user-view-profile.php" class="card-footer text-white text-decoration-none text-center">View Profile <i class="fas fa-angle-right"></i></a>
+                <a href="user-view-profile.php" class="card-footer text-white text-decoration-none text-center">
+                    View Profile <i class="fas fa-angle-right ms-1"></i>
+                </a>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card bg-success text-white h-100">
+
+        <div class="col-md-4">
+            <div class="card card-hover bg-success text-white h-100 shadow-sm">
                 <div class="card-body d-flex align-items-center justify-content-between">
-                    <div><i class="fas fa-clipboard card-body-icon"></i> My Booking</div>
+                    <div><i class="fas fa-clipboard-list card-body-icon"></i></div>
+                    <h5 class="mb-0">My Bookings</h5>
                 </div>
-                <a href="user-view-booking.php" class="card-footer text-white text-decoration-none text-center">View Bookings <i class="fas fa-angle-right"></i></a>
+                <a href="user-view-booking.php" class="card-footer text-white text-decoration-none text-center">
+                    View Bookings <i class="fas fa-angle-right ms-1"></i>
+                </a>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card bg-danger text-white h-100">
+
+        <div class="col-md-4">
+            <div class="card card-hover bg-warning text-dark h-100 shadow-sm">
                 <div class="card-body d-flex align-items-center justify-content-between">
-                    <div><i class="fas fa-times card-body-icon"></i> Cancel Booking</div>
+                    <div><i class="fas fa-car-side card-body-icon"></i></div>
+                    <h5 class="mb-0">Book Vehicle</h5>
                 </div>
-                <a href="user-manage-booking.php" class="card-footer text-white text-decoration-none text-center">Manage Bookings <i class="fas fa-angle-right"></i></a>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-warning text-dark h-100">
-                <div class="card-body d-flex align-items-center justify-content-between">
-                    <div><i class="fas fa-bus card-body-icon"></i> Book Vehicle</div>
-                </div>
-                <a href="usr-book-vehicle.php" class="card-footer text-dark text-decoration-none text-center">Book Now <i class="fas fa-angle-right"></i></a>
+                <a href="usr-book-vehicle.php" class="card-footer text-dark text-decoration-none text-center">
+                    Book Now <i class="fas fa-angle-right ms-1"></i>
+                </a>
             </div>
         </div>
     </div>

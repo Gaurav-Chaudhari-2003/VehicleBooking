@@ -1,145 +1,176 @@
 <?php
-  session_start();
-  include('vendor/inc/config.php');
-  include('vendor/inc/checklogin.php');
-  check_login();
-  $aid=$_SESSION['u_id'];
+global $mysqli;
+session_start();
+include('vendor/inc/config.php');
+include('vendor/inc/checklogin.php');
+check_login();
+$aid = $_SESSION['u_id'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
-<?php include("vendor/inc/head.php");?>
+<?php include("vendor/inc/head.php"); ?>
 
 <body id="page-top">
- <!--Start Navigation Bar-->
-  <?php include("vendor/inc/nav.php");?>
-  <!--Navigation Bar-->
 
-  <div id="wrapper">
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center bg-info text-white">
+            <h4 class="mb-0"><i class="fas fa-list"></i> My Bookings</h4>
+            <a href="user-dashboard.php" class="btn btn-light btn-sm">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+        </div>
+    </div>
 
-    <!-- Sidebar -->
-    <?php include("vendor/inc/sidebar.php");?>
-    <!--End Sidebar-->
-    <div id="content-wrapper">
+    <!-- Booking Cards -->
+    <div class="row" id="bookingCards">
+        <?php
+        $query = "
+            SELECT u.u_id, u.u_fname, u.u_lname, u.u_phone, u.u_car_type, u.u_car_regno, u.u_car_bookdate, u.u_car_book_status,
+                   v.v_dpic
+            FROM tms_user u
+            JOIN tms_vehicle v ON u.u_car_regno = v.v_reg_no
+            WHERE u.u_id = ? AND u.u_car_book_status IS NOT NULL AND u.u_car_book_status != ''
+        ";
+        $stmt = $mysqli->prepare($query);
+        $stmt->bind_param('i', $aid);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $numRows = $res->num_rows;
 
-      <div class="container-fluid">
+        $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
 
-        <!-- Breadcrumbs-->
-        <ol class="breadcrumb">
-          <li class="breadcrumb-item">
-            <a href="user-dashboard.php">Dashboard</a>
-          </li>
-          <li class="breadcrumb-item">Booking</li>
-          <li class="breadcrumb-item ">View My Booking</li>
-        </ol>
-
-        <!-- My Bookings-->
-        <div class="card mb-3">
-          <div class="card-header">
-            <i class="fas fa-table"></i>
-            Bookings</div>
-          <div class="card-body">
-            <div class="table-responsive">
-              <table class="table table-bordered table-striped table-hover" id="dataTable" width="100%" cellspacing="0">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Phone</th>
-                    <th>Vehicle Type</th>
-                    <th>Reg No.</th>
-                    <th>Booking date</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                
-                <tbody>
-                <?php
-                    $aid=$_SESSION['u_id'];
-                $ret = "SELECT * FROM tms_user WHERE u_id=? AND (u_car_book_status IS NOT NULL AND u_car_book_status != '')";
-                $stmt= $mysqli->prepare($ret) ;
-                    $stmt->bind_param('i',$aid);
-                    $stmt->execute() ;//ok
-                    $res=$stmt->get_result();
-                    //$cnt=1;
-                        while($row=$res->fetch_object())
-                        {
+        if ($numRows > 0) {
+            while ($row = $res->fetch_object()) {
+                $imagePath = $projectFolder . 'vendor/img/' . ($row->v_dpic ?: 'placeholder.png');
                 ?>
-                  <tr>
-                    <td><?php echo $row->u_fname;?> <?php echo $row->u_lname;?></td>
-                    <td><?php echo $row->u_phone;?></td>
-                    <td><?php echo $row->u_car_type;?></td>
-                    <td><?php echo $row->u_car_regno;?></td>
-                    <td><?php echo $row->u_car_bookdate;?></td>
-                    <td><?php if($row->u_car_book_status == "Pending"){ echo '<span class = "badge badge-warning">'.$row->u_car_book_status.'</span>'; } else { echo '<span class = "badge badge-success">'.$row->u_car_book_status.'</span>';}?></td>
-                  </tr>
-
-                <?php  }?>
-                </tbody>
-              </table>
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 shadow-sm">
+                        <img src="<?php echo $imagePath; ?>" class="card-img-top enlargeable rounded-top"
+                             style="height: 200px; object-fit: cover; cursor: pointer;"
+                             alt="Vehicle Image" data-full="<?php echo $imagePath; ?>">
+                        <div class="card-body">
+                            <h5 class="card-title mb-1"><?php echo "{$row->u_fname} {$row->u_lname}"; ?></h5>
+                            <p class="mb-1"><strong>Phone:</strong> <?php echo $row->u_phone; ?></p>
+                            <p class="mb-1"><strong>Vehicle:</strong> <?php echo "{$row->u_car_type} ({$row->u_car_regno})"; ?></p>
+                            <p class="mb-1"><strong>Booking Date:</strong> <?php echo $row->u_car_bookdate; ?></p>
+                            <p>
+                                <strong>Status:</strong>
+                                <?php echo $row->u_car_book_status === "Pending"
+                                    ? '<span class="badge badge-warning">Pending</span>'
+                                    : '<span class="badge badge-success">Approved</span>'; ?>
+                            </p>
+                        </div>
+                        <div class="card-footer bg-transparent text-end">
+                            <a href="#" class="btn btn-danger btn-sm cancel-booking-btn" data-uid="<?php echo $row->u_id; ?>">
+                                <i class="fas fa-times-circle"></i> Cancel Booking
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            <?php }
+        } else { ?>
+            <div class="col-12">
+                <div class="alert alert-warning text-center shadow-sm p-4">
+                    <h5 class="mb-3"><i class="fas fa-info-circle"></i> No Bookings Found</h5>
+                    <p>You have no active bookings at the moment.</p>
+                    <a href="user-book-vehicle.php" class="btn btn-primary btn-sm">
+                        <i class="fas fa-car-side"></i> Book a Vehicle Now
+                    </a>
+                </div>
             </div>
-          </div>
-          <div class="card-footer small text-muted">
-            <?php
-              date_default_timezone_set("Africa/Nairobi");
-              echo "Generated:" . date("h:i:sa");
-            ?> 
-        </div>
-        </div>
-        
-      </div>
-      <!-- /.container-fluid -->
-
-      <!-- Sticky Footer -->
-      <?php include("vendor/inc/footer.php");?>
-
+        <?php } ?>
     </div>
-    <!-- /.content-wrapper -->
 
-  </div>
-  <!-- /#wrapper -->
-
-  <!-- Scroll to Top Button-->
-  <a class="scroll-to-top rounded" href="#page-top">
-    <i class="fas fa-angle-up"></i>
-  </a>
-
-  <!-- Logout Modal-->
-  <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="exampleModalLabel">Ready to Leave?</h5>
-          <button class="close" type="button" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">×</span>
-          </button>
+    <!-- Image Zoom Modal -->
+    <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content border-0 bg-transparent">
+                <div class="modal-body p-0 text-center">
+                    <img id="modalImage" class="img-fluid rounded" src="" alt="Zoomed Vehicle Image"
+                         style="max-height: 90vh; object-fit: contain;">
+                </div>
+            </div>
         </div>
-        <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
-          <a class="btn btn-danger" href="user-logout.php">Logout</a>
-        </div>
-      </div>
     </div>
-  </div>
 
-  <!-- Bootstrap core JavaScript-->
-  <script src="vendor/jquery/jquery.min.js"></script>
-  <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <!-- Cancel Booking Confirmation Modal -->
+    <div class="modal fade" id="cancelModal" tabindex="-1" aria-labelledby="cancelModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="cancelModalLabel">Cancel Booking</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to cancel this booking?
+                    <input type="hidden" id="cancelBookingId">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">No, Keep It</button>
+                    <button type="button" class="btn btn-danger btn-sm" id="confirmCancelBtn">Yes, Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-  <!-- Core plugin JavaScript-->
-  <script src="vendor/jquery-easing/jquery.easing.min.js"></script>
+</div>
 
-  <!-- Page level plugin JavaScript-->
-  <script src="vendor/chart.js/Chart.min.js"></script>
-  <script src="vendor/datatables/jquery.dataTables.js"></script>
-  <script src="vendor/datatables/dataTables.bootstrap4.js"></script>
+<!-- Scripts -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-  <!-- Custom scripts for all pages-->
-  <script src="vendor/js/sb-admin.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // Image zoom modal
+        $('.enlargeable').on('click', function () {
+            $('#modalImage').attr('src', $(this).data('full'));
+            $('#imageModal').modal('show');
+        });
 
-  <!-- Demo scripts for this page-->
-  <script src="vendor/js/demo/datatables-demo.js"></script>
-  <script src="vendor/js/demo/chart-area-demo.js"></script>
+        // Cancel booking logic
+        let cancelId = null;
+
+        $('.cancel-booking-btn').on('click', function (e) {
+            e.preventDefault();
+            cancelId = $(this).data('uid');
+            $('#cancelBookingId').val(cancelId);
+            $('#cancelModal').modal('show');
+        });
+
+        $('#confirmCancelBtn').on('click', function () {
+            const userId = $('#cancelBookingId').val();
+
+            $.ajax({
+                type: 'POST',
+                url: 'user-delete-booking.php',
+                data: { delete_booking: true, u_id: userId },
+                success: function () {
+                    $('#cancelModal').modal('hide');
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Booking Cancelled',
+                        text: 'Your booking has been successfully cancelled.',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => location.reload());
+                },
+                error: function () {
+                    $('#cancelModal').modal('hide');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to cancel the booking. Please try again.'
+                    });
+                }
+            });
+        });
+    });
+</script>
 
 </body>
-
 </html>

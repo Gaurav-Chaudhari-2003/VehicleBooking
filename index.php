@@ -20,14 +20,8 @@ include('admin/vendor/inc/config.php');
             background-color: #fafafa; /* Light background for a clean, professional look */
             color: #333; /* Standard dark text color for readability */
         }
-        .navbar {
-            background-color: #00695c; /* Deep teal green for navbar */
-        }
-        .navbar-brand, .nav-link, .footer {
-            color: #ffffff !important; /* White text color for visibility */
-        }
+
         .hero-section {
-            background: url('vendor/img/hero-bg.jpg') no-repeat center center/cover;
             color: white;
             padding: 120px 0 80px;
             text-align: center;
@@ -35,10 +29,6 @@ include('admin/vendor/inc/config.php');
         .hero-section h1 {
             font-size: 3rem;
             font-weight: bold;
-        }
-        .hero-section .lead {
-            font-size: 1.25rem;
-            margin-top: 10px;
         }
         .vehicle-section {
             padding: 60px 0;
