@@ -46,7 +46,7 @@ if ($aid) {
 <div class="container my-4">
     <?php if (isset($_SESSION['msg'])): ?>
         <script>
-            setTimeout(() => swal("Info", "<?php echo $_SESSION['msg']; ?>", "info"), 100);
+                setTimeout(() => swal("Warning", "<?php echo $_SESSION['msg']; ?>", "error"), 100);
         </script>
         <?php unset($_SESSION['msg']); ?>
     <?php endif; ?>
