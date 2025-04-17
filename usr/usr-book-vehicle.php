@@ -60,7 +60,7 @@ if ($aid) {
         <div class="card-body">
             <div class="row mb-3">
                 <div class="col-md-3">
-                    <select id="seatFilter" class="form-control">
+                    <label for="seatFilter"></label><select id="seatFilter" class="form-control">
                         <option value="">Filter by Seats</option>
                         <?php
                         $seatStmt = $mysqli->prepare("SELECT DISTINCT v_pass_no FROM tms_vehicle WHERE v_status = 'Available' ORDER BY v_pass_no");
@@ -74,7 +74,7 @@ if ($aid) {
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <input type="text" id="driverFilter" class="form-control" placeholder="Filter by Driver">
+                    <label for="driverFilter"></label><input type="text" id="driverFilter" class="form-control" placeholder="Filter by Driver">
                 </div>
             </div>
 
@@ -98,7 +98,9 @@ if ($aid) {
                                     <div class="modal-body">
                                         <p><strong>Category:</strong> <?= $row->v_category; ?></p>
                                         <p><strong>Reg. No:</strong> <?= $row->v_reg_no; ?></p>
-                                        <input type="date" name="u_car_bookdate" class="form-control mb-2" required>
+                                        <label>
+                                            <input type="date" name="u_car_bookdate" class="form-control mb-2" required>
+                                        </label>
                                         <input type="hidden" name="v_id" value="<?= $row->v_id; ?>">
                                         <input type="hidden" name="u_car_type" value="<?= $row->v_category; ?>">
                                         <input type="hidden" name="u_car_regno" value="<?= $row->v_reg_no; ?>">
