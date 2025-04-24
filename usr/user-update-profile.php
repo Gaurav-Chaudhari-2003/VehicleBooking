@@ -1,192 +1,114 @@
 <?php
-  session_start();
-  include('vendor/inc/config.php');
-  include('vendor/inc/checklogin.php');
-  check_login();
-  $aid=$_SESSION['u_id'];
-  //Add USer
-  if(isset($_POST['update_profile']))
-    {
-            $u_id= $_SESSION['u_id'];
-            $u_fname=$_POST['u_fname'];
-            $u_lname = $_POST['u_lname'];
-            $u_phone=$_POST['u_phone'];
-            $u_addr=$_POST['u_addr'];
-            $u_email=$_POST['u_email'];
-           // $u_pwd=$_POST['u_pwd'];
-            $u_category=$_POST['u_category'];
-            $query="update tms_user set u_fname=?, u_lname=?, u_phone=?, u_addr=?, u_category=?, u_email=? where u_id=?";
-            $stmt = $mysqli->prepare($query);
-            $rc=$stmt->bind_param('ssssssi', $u_fname,  $u_lname, $u_phone, $u_addr, $u_category, $u_email, $u_id);
-            $stmt->execute();
-                if($stmt)
-                {
-                    $succ = "Profile Updated";
-                }
-                else 
-                {
-                    $err = "Please Try Again Later";
-                }
-            }
+session_start();
+include('vendor/inc/config.php');
+include('vendor/inc/checklogin.php');
+check_login();
+
+$u_id = $_SESSION['u_id'];
+$succ = $err = "";
+
+// Handle profile update
+if (isset($_POST['update_profile'])) {
+    $u_fname = $_POST['u_fname'];
+    $u_lname = $_POST['u_lname'];
+    $u_phone = $_POST['u_phone'];
+    $u_addr  = $_POST['u_addr'];
+    $u_email = $_POST['u_email'];
+
+    $stmt = $mysqli->prepare("UPDATE tms_user SET u_fname=?, u_lname=?, u_phone=?, u_addr=?, u_email=? WHERE u_id=?");
+    if ($stmt) {
+        $stmt->bind_param('sssssi', $u_fname, $u_lname, $u_phone, $u_addr, $u_email, $u_id);
+        if ($stmt->execute()) {
+            $succ = "Profile Updated Successfully!";
+        } else {
+            $err = "Execution Failed. Please Try Again";
+        }
+    } else {
+        $err = "Database Error. Please Try Again";
+    }
+}
+
+// Fetch current user data
+$stmt = $mysqli->prepare("SELECT * FROM tms_user WHERE u_id=?");
+$stmt->bind_param('i', $u_id);
+$stmt->execute();
+$res = $stmt->get_result();
+$row = $res->fetch_object();
 ?>
-<!DOCTYPE html>
-<html lang="en">
 
-<?php include('vendor/inc/head.php');?>
+<?php include("vendor/inc/head.php"); ?>
+<!-- Include SweetAlert if not already included -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<body>
 
-<body id="page-top">
- <!--Start Navigation Bar-->
-  <?php include("vendor/inc/nav.php");?>
-  <!--Navigation Bar-->
+<div class="container mt-5">
 
-  <div id="wrapper">
-
-    <!-- Sidebar -->
-    <?php include("vendor/inc/sidebar.php");?>
-    <!--End Sidebar-->
-    <div id="content-wrapper">
-
-      <div class="container-fluid">
-      <?php if(isset($succ)) {?>
-                        <!--This code for injecting an alert-->
+    <!-- Show SweetAlert on success -->
+    <?php if (!empty($succ)): ?>
         <script>
-                    setTimeout(function () 
-                    { 
-                        swal("Success!","<?php echo $succ;?>!","success");
-                    },
-                        100);
+            document.addEventListener("DOMContentLoaded", function () {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success',
+                    text: '<?php echo $succ; ?>',
+                    timer: 2000,
+                    timerProgressBar: true,
+                    showConfirmButton: false
+                }).then(() => {
+                    window.location.href = 'user-dashboard.php';
+                });
+            });
         </script>
+    <?php endif; ?>
 
-        <?php } ?>
-        <?php if(isset($err)) {?>
-        <!--This code for injecting an alert-->
+    <!-- Show SweetAlert on error -->
+    <?php if (!empty($err)): ?>
         <script>
-                    setTimeout(function () 
-                    { 
-                        swal("Failed!","<?php echo $err;?>!","Failed");
-                    },
-                        100);
+            document.addEventListener("DOMContentLoaded", function () {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: '<?php echo $err; ?>',
+                    confirmButtonColor: '#d33'
+                });
+            });
         </script>
+    <?php endif; ?>
 
-        <?php } ?>
-
-         <!-- Breadcrumbs-->
-         <ol class="breadcrumb">
-          <li class="breadcrumb-item">
-            <a href="user-dashboard.php">Dashboard</a>
-          </li>
-          <li class="breadcrumb-item">Profile</li>
-          <li class="breadcrumb-item active">Update Profile</li>
-        </ol>
-        <hr>
-        <div class="card">
-        <div class="card-header">
-          Add User
+    <!-- Profile Update Form -->
+    <div class="card shadow rounded-4">
+        <div class="card-header bg-primary text-white fw-bold fs-5 py-3 rounded-top-4">
+            Update Profile
         </div>
-        <div class="card-body">
-          <!--Add User Form-->
-          <?php
-            $aid=$_SESSION['u_id'];
-            $ret="select * from tms_user where u_id=?";
-            $stmt= $mysqli->prepare($ret) ;
-            $stmt->bind_param('i',$aid);
-            $stmt->execute() ;//ok
-            $res=$stmt->get_result();
-            //$cnt=1;
-            while($row=$res->fetch_object())
-        {
-        ?>
-          <form method ="POST"> 
-            <div class="form-group">
-                <label for="exampleInputEmail1">First Name</label>
-                <input type="text" value="<?php echo $row->u_fname;?>" required class="form-control" id="exampleInputEmail1" name="u_fname">
-            </div>
-            <div class="form-group">
-                <label for="exampleInputEmail1">Last Name</label>
-                <input type="text" class="form-control" value="<?php echo $row->u_lname;?>" id="exampleInputEmail1" name="u_lname">
-            </div>
-            <div class="form-group">
-                <label for="exampleInputEmail1">Contact</label>
-                <input type="text" class="form-control" value="<?php echo $row->u_phone;?>" id="exampleInputEmail1" name="u_phone">
-            </div>
-            <div class="form-group">
-                <label for="exampleInputEmail1">Address</label>
-                <input type="text" class="form-control" value="<?php echo $row->u_addr;?>" id="exampleInputEmail1" name="u_addr">
-            </div>
-
-            <div class="form-group" style="display:none">
-                <label for="exampleInputEmail1">Category</label>
-                <input type="text" class="form-control" id="exampleInputEmail1" value="User" name="u_category">
-            </div>
-            
-            <div class="form-group">
-                <label for="exampleInputEmail1">Email address</label>
-                <input type="email" value="<?php echo $row->u_email;?>" class="form-control" name="u_email"">
-            </div>
-            <button type="submit" name="update_profile" class="btn btn-outline-success">Update Profile </button>
-          </form>
-          <!-- End Form-->
-        <?php }?>
+        <div class="card-body p-4">
+            <form method="post" class="row g-3">
+                <div class="col-md-6">
+                    <label for="u_fname" class="form-label">First Name</label>
+                    <input type="text" name="u_fname" id="u_fname" class="form-control" value="<?php echo htmlspecialchars($row->u_fname); ?>" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="u_lname" class="form-label">Last Name</label>
+                    <input type="text" name="u_lname" id="u_lname" class="form-control" value="<?php echo htmlspecialchars($row->u_lname); ?>" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="u_phone" class="form-label">Phone Number</label>
+                    <input type="text" name="u_phone" id="u_phone" class="form-control" value="<?php echo htmlspecialchars($row->u_phone); ?>" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="u_email" class="form-label">Email</label>
+                    <input type="email" name="u_email" id="u_email" class="form-control" value="<?php echo htmlspecialchars($row->u_email); ?>" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="u_addr" class="form-label">Address</label>
+                    <input type="text" name="u_addr" id="u_addr" class="form-control" value="<?php echo htmlspecialchars($row->u_addr); ?>" required>
+                </div>
+                <div class="col-12 text-end">
+                    <button type="submit" name="update_profile" class="btn btn-success rounded-pill px-4 py-2">Update Profile</button>
+                </div>
+            </form>
         </div>
-      </div>
-       
-      <hr>
-     
-
-      <!-- Sticky Footer -->
-      <?php include("vendor/inc/footer.php");?>
-
     </div>
-    <!-- /.content-wrapper -->
-
-  </div>
-  <!-- /#wrapper -->
-
-  <!-- Scroll to Top Button-->
-  <a class="scroll-to-top rounded" href="#page-top">
-    <i class="fas fa-angle-up"></i>
-  </a>
-
-  <!-- Logout Modal-->
-  <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="exampleModalLabel">Ready to Leave?</h5>
-          <button class="close" type="button" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">×</span>
-          </button>
-        </div>
-        <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
-          <a class="btn btn-danger" href="admin-logout.php">Logout</a>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Bootstrap core JavaScript-->
-  <script src="vendor/jquery/jquery.min.js"></script>
-  <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-
-  <!-- Core plugin JavaScript-->
-  <script src="vendor/jquery-easing/jquery.easing.min.js"></script>
-
-  <!-- Page level plugin JavaScript-->
-  <script src="vendor/chart.js/Chart.min.js"></script>
-  <script src="vendor/datatables/jquery.dataTables.js"></script>
-  <script src="vendor/datatables/dataTables.bootstrap4.js"></script>
-
-  <!-- Custom scripts for all pages-->
-  <script src="vendor/js/sb-admin.min.js"></script>
-
-  <!-- Demo scripts for this page-->
-  <script src="vendor/js/demo/datatables-demo.js"></script>
-  <script src="vendor/js/demo/chart-area-demo.js"></script>
- <!--INject Sweet alert js-->
- <script src="vendor/js/swal.js"></script>
+</div>
 
 </body>
-
 </html>

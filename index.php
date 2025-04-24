@@ -71,7 +71,7 @@ include('admin/vendor/inc/config.php');
 <?php include("vendor/inc/nav.php"); ?>
 
 <!-- Hero Banner -->
-<section class="hero-section" style="background-color: #e0f2f1;"> <!-- fallback if image fails -->
+<section class="hero-section" style="background-color: #e0f2f1;"> <!-- fallback if the image fails -->
     <div class="container text-dark"> <!-- added text-dark class -->
         <h1 class="mb-5" style="color: #004d40;">CMPDI RI-4, Nagpur</h1>
         <p class="mb-5" style="color: #00695c;">Official Vehicle Booking System for Internal Transport Requests</p>
@@ -130,7 +130,7 @@ include('admin/vendor/inc/config.php');
             <div class="col-md-4 mb-3">
                 <div class="testimonial">
                     <p>“User-friendly and saves a lot of paperwork. Very helpful.”</p>
-                    <small>- R. Singh, Admin Office</small>
+                    <small>— R. Singh, Admin Office</small>
                 </div>
             </div>
             <div class="col-md-4 mb-3">

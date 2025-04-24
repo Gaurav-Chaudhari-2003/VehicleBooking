@@ -1,165 +1,105 @@
 <?php
-  session_start();
-  include('vendor/inc/config.php');
-  include('vendor/inc/checklogin.php');
-  check_login();
-  $aid=$_SESSION['u_id'];
-  //Add USer
-  if(isset($_POST['update_password']))
-    {
-            $u_id = $_SESSION['u_id'];
-            $u_pwd=$_POST['u_pwd'];
-           // $u_category=$_POST['u_category'];
-            $query="update tms_user set u_pwd=? where u_id=?";
-            $stmt = $mysqli->prepare($query);
-            $rc=$stmt->bind_param('si',  $u_pwd, $u_id);
-            $stmt->execute();
-                if($stmt)
-                {
-                    $succ = "Password Updated";
-                }
-                else 
-                {
-                    $err = "Please Try Again Later";
-                }
+session_start();
+include('vendor/inc/config.php');
+include('vendor/inc/checklogin.php');
+check_login();
+$u_id = $_SESSION['u_id'];
+
+$succ = '';
+$err = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $old_pwd = $_POST['old_pwd'];
+    $new_pwd = $_POST['new_pwd'];
+    $confirm_pwd = $_POST['confirm_pwd'];
+
+    // Fetch plain text password
+    $stmt = $mysqli->prepare("SELECT u_pwd FROM tms_user WHERE u_id=?");
+    $stmt->bind_param("i", $u_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $user = $result->fetch_assoc();
+
+    if ($user && $old_pwd === $user['u_pwd']) {
+        if ($new_pwd === $confirm_pwd) {
+            $update = $mysqli->prepare("UPDATE tms_user SET u_pwd=? WHERE u_id=?");
+            $update->bind_param("si", $new_pwd, $u_id);
+            if ($update->execute()) {
+                $succ = "Password updated successfully!";
+            } else {
+                $err = "Database update error!";
             }
+        } else {
+            $err = "New and Confirm password do not match!";
+        }
+    } else {
+        $err = "Old password is incorrect!";
+    }
+}
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
-
-<?php include('vendor/inc/head.php');?>
-
+<?php include('vendor/inc/head.php'); ?>
 <body id="page-top">
- <!--Start Navigation Bar-->
-  <?php include("vendor/inc/nav.php");?>
-  <!--Navigation Bar-->
-
-  <div id="wrapper">
-
-    <!-- Sidebar -->
-    <?php include("vendor/inc/sidebar.php");?>
-    <!--End Sidebar-->
+<div id="wrapper">
     <div id="content-wrapper">
+        <div class="container-fluid mt-4">
 
-      <div class="container-fluid">
-      <?php if(isset($succ)) {?>
-                        <!--This code for injecting an alert-->
-        <script>
-                    setTimeout(function () 
-                    { 
-                        swal("Success!","<?php echo $succ;?>!","success");
-                    },
-                        100);
-        </script>
+            <!-- Bootstrap Alert -->
+            <?php if (!empty($succ)): ?>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <?php echo $succ; ?>
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <script>
+                    setTimeout(() => {
+                        window.location.href = "user-dashboard.php";
+                    }, 2500);
+                </script>
+            <?php elseif (!empty($err)): ?>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <?php echo $err; ?>
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            <?php endif; ?>
 
-        <?php } ?>
-        <?php if(isset($err)) {?>
-        <!--This code for injecting an alert-->
-        <script>
-                    setTimeout(function () 
-                    { 
-                        swal("Failed!","<?php echo $err;?>!","Failed");
-                    },
-                        100);
-        </script>
+            <div class="card shadow mb-4">
+                <div class="card-header bg-primary text-white">Change Your Password</div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="form-group">
+                            <label>Old Password</label>
+                            <input type="password" class="form-control" name="old_pwd" required>
+                        </div>
+                        <div class="form-group">
+                            <label>New Password</label>
+                            <input type="password" class="form-control" name="new_pwd" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Confirm Password</label>
+                            <input type="password" class="form-control" name="confirm_pwd" required>
+                        </div>
+                        <button type="submit" class="btn btn-danger btn-block mt-3">
+                            Update Password
+                        </button>
+                    </form>
+                </div>
+            </div>
 
-        <?php } ?>
-
-         <!-- Breadcrumbs-->
-         <ol class="breadcrumb">
-          <li class="breadcrumb-item">
-            <a href="user-dashboard.php">Dashboard</a>
-          </li>
-          <li class="breadcrumb-item">Profile</li>
-          <li class="breadcrumb-item active">Change Password</li>
-        </ol>
-        <hr>
-        <div class="card">
-        <div class="card-header">
-          Add User
         </div>
-        <div class="card-body">
-        
-          <form method ="POST"> 
-            
-            <div class="form-group" >
-                <label for="exampleInputEmail1">Old Password</label>
-                <input type="password" class="form-control" id="exampleInputEmail1" >
-            </div>
-
-            <div class="form-group" >
-                <label for="exampleInputEmail1">New Password</label>
-                <input type="password" class="form-control" id="exampleInputEmail1"  name="u_pwd">
-            </div>
-
-            <div class="form-group" >
-                <label for="exampleInputEmail1">COnfirm Password</label>
-                <input type="password" class="form-control" id="exampleInputEmail1"  name="u_pwd">
-            </div>
-            
-            <button type="submit" name="update_password" class="btn btn-outline-danger">Change Pasword</button>
-          </form>
-          <!-- End Form-->
-        </div>
-      </div>
-       
-      <hr>
-     
-
-      <!-- Sticky Footer -->
-      <?php include("vendor/inc/footer.php");?>
-
     </div>
-    <!-- /.content-wrapper -->
+</div>
 
-  </div>
-  <!-- /#wrapper -->
-
-  <!-- Scroll to Top Button-->
-  <a class="scroll-to-top rounded" href="#page-top">
-    <i class="fas fa-angle-up"></i>
-  </a>
-
-  <!-- Logout Modal-->
-  <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="exampleModalLabel">Ready to Leave?</h5>
-          <button class="close" type="button" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">×</span>
-          </button>
-        </div>
-        <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
-          <a class="btn btn-danger" href="admin-logout.php">Logout</a>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Bootstrap core JavaScript-->
-  <script src="vendor/jquery/jquery.min.js"></script>
-  <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-
-  <!-- Core plugin JavaScript-->
-  <script src="vendor/jquery-easing/jquery.easing.min.js"></script>
-
-  <!-- Page level plugin JavaScript-->
-  <script src="vendor/chart.js/Chart.min.js"></script>
-  <script src="vendor/datatables/jquery.dataTables.js"></script>
-  <script src="vendor/datatables/dataTables.bootstrap4.js"></script>
-
-  <!-- Custom scripts for all pages-->
-  <script src="vendor/js/sb-admin.min.js"></script>
-
-  <!-- Demo scripts for this page-->
-  <script src="vendor/js/demo/datatables-demo.js"></script>
-  <script src="vendor/js/demo/chart-area-demo.js"></script>
- <!--INject Sweet alert js-->
- <script src="vendor/js/swal.js"></script>
+<!-- JS Files -->
+<script src="vendor/jquery/jquery.min.js"></script>
+<script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="vendor/jquery-easing/jquery.easing.min.js"></script>
+<script src="vendor/js/sb-admin.min.js"></script>
 
 </body>
-
 </html>
