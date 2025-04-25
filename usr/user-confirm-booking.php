@@ -12,35 +12,27 @@ $redirect_url = 'user-dashboard.php';
 
 if (isset($_POST['book_vehicle'])) {
     $u_id = $_SESSION['u_id'];
-    $u_car_type = $_POST['u_car_type'];
-    $u_car_regno  = $_POST['u_car_regno'];
-    $u_car_bookdate = $_POST['u_car_bookdate'];
-    $u_car_book_status  = $_POST['u_car_book_status'];
+    $vehicle_id = $_POST['v_id']; // Assuming you're passing vehicle_id in the form
+    $book_from_date = $_POST['book_from_date'];
+    $book_to_date = $_POST['book_to_date'];
+    $status = 'Pending'; // Default status
 
-    // STEP 1: Check for existing booking with status Pending or Approved
-    $statusStmt = $mysqli->prepare("SELECT u_car_book_status FROM tms_user WHERE u_id = ? AND (u_car_book_status = 'Pending' OR u_car_book_status = 'Approved')");
-    $statusStmt->bind_param('i', $u_id);
+    // STEP 1: Check for existing booking conflicts in the tms_booking table (for Pending or Approved status)
+    $statusStmt = $mysqli->prepare("SELECT * FROM tms_booking WHERE vehicle_id = ? AND ((? BETWEEN book_from_date AND book_to_date) OR (? BETWEEN book_from_date AND book_to_date)) AND status IN ('Pending', 'Approved')");
+    $statusStmt->bind_param('iss', $vehicle_id, $book_from_date, $book_to_date);
     $statusStmt->execute();
     $statusResult = $statusStmt->get_result();
 
     if ($statusResult->num_rows > 0) {
-        $statusRow = $statusResult->fetch_assoc();
-        $status = $statusRow['u_car_book_status'];
-
-        if ($status === 'Pending') {
-            $alert_type = 'warning';
-            $alert_title = 'Warning';
-            $alert_text = "You already have a pending vehicle booking request. Please cancel it before making a new one.";
-        } elseif ($status === 'Approved') {
-            $alert_type = 'warning';
-            $alert_title = 'Warning';
-            $alert_text = "You already have an approved vehicle booking. Please complete or cancel it before requesting another.";
-        }
+        // There is a conflict with the selected booking dates
+        $alert_type = 'warning';
+        $alert_title = 'Warning';
+        $alert_text = "This vehicle is already booked for the selected date range. Please choose a different range.";
     } else {
-        // Update vehicle booking in the database
-        $query = "UPDATE tms_user SET u_car_type=?, u_car_bookdate=?, u_car_regno=?, u_car_book_status=? WHERE u_id=?";
+        // STEP 2: Insert the new booking into the tms_booking table
+        $query = "INSERT INTO tms_booking (user_id, vehicle_id, book_from_date, book_to_date, status) VALUES (?, ?, ?, ?, ?)";
         $stmt = $mysqli->prepare($query);
-        $stmt->bind_param('ssssi', $u_car_type, $u_car_bookdate, $u_car_regno, $u_car_book_status, $u_id);
+        $stmt->bind_param('iisss', $u_id, $vehicle_id, $book_from_date, $book_to_date, $status);
 
         if ($stmt->execute()) {
             $alert_type = 'success';

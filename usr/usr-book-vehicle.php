@@ -33,20 +33,44 @@ if ($aid) {
     <!-- SweetAlert -->
     <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
 
+    <!-- Flatpickr CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+
     <style>
-        .vehicle-img { height: 200px; object-fit: cover; border-radius: 8px; }
-        .vehicle-card .card { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transition: transform 0.2s ease; }
-        .vehicle-card .card:hover { transform: translateY(-4px); }
-        .modal-content { border-radius: 12px; }
-        .btn-block { width: 100%; }
-        body { background-color: #f4f6f9; }
+        .vehicle-img {
+            height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .vehicle-card .card {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transition: transform 0.2s ease;
+        }
+
+        .vehicle-card .card:hover {
+            transform: translateY(-4px);
+        }
+
+        .modal-content {
+            border-radius: 12px;
+        }
+
+        .btn-block {
+            width: 100%;
+        }
+
+        body {
+            background-color: #f4f6f9;
+        }
     </style>
 </head>
 <body>
 <div class="container my-4">
     <?php if (isset($_SESSION['msg'])): ?>
         <script>
-                setTimeout(() => swal("Warning", "<?php echo $_SESSION['msg']; ?>", "error"), 100);
+            setTimeout(() => swal("Warning", "<?php echo $_SESSION['msg']; ?>", "error"), 100);
         </script>
         <?php unset($_SESSION['msg']); ?>
     <?php endif; ?>
@@ -54,7 +78,9 @@ if ($aid) {
     <div class="card mb-3">
         <div class="card-header d-flex justify-content-between align-items-center bg-info text-white">
             <div><i class="fas fa-bus"></i> Available Vehicles</div>
-            <label for="searchInput"></label><input type="text" id="searchInput" class="form-control form-control-sm w-auto" placeholder="Search vehicles...">
+            <label for="searchInput"></label><input type="text" id="searchInput"
+                                                    class="form-control form-control-sm w-auto"
+                                                    placeholder="Search vehicles...">
         </div>
 
         <div class="card-body">
@@ -74,7 +100,8 @@ if ($aid) {
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label for="driverFilter"></label><input type="text" id="driverFilter" class="form-control" placeholder="Filter by Driver">
+                    <label for="driverFilter"></label><input type="text" id="driverFilter" class="form-control"
+                                                             placeholder="Filter by Driver">
                 </div>
             </div>
 
@@ -87,33 +114,58 @@ if ($aid) {
                     $imagePath = $projectFolder . 'vendor/img/' . ($row->v_dpic ?: 'placeholder.png');
                     ?>
                     <!-- Modal -->
-                    <div class="modal fade" id="bookModal<?php echo $row->v_id; ?>" tabindex="-1">
+                    <div class="modal fade" id="bookModal<?php echo $row->v_id; ?>" tabindex="-1"
+                         aria-labelledby="bookModalLabel<?php echo $row->v_id; ?>" aria-hidden="true">
                         <div class="modal-dialog modal-dialog-centered">
-                            <div class="modal-content">
+                            <div class="modal-content border-0 shadow-lg rounded-4">
                                 <form method="POST" action="user-confirm-booking.php">
-                                    <div class="modal-header bg-warning text-dark">
-                                        <h5 class="modal-title">Confirm Vehicle Booking</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    <div class="modal-header bg-warning text-dark rounded-top-4">
+                                        <h5 class="modal-title" id="bookModalLabel<?php echo $row->v_id; ?>">
+                                            Confirm Vehicle Booking
+                                        </h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                aria-label="Close"></button>
                                     </div>
+
                                     <div class="modal-body">
-                                        <p><strong>Category:</strong> <?= $row->v_category; ?></p>
-                                        <p><strong>Reg. No:</strong> <?= $row->v_reg_no; ?></p>
-                                        <label>
-                                            <input type="date" name="u_car_bookdate" class="form-control mb-2" required>
-                                        </label>
+                                        <div class="mb-2">
+                                            <strong>Category:</strong> <?= $row->v_category; ?><br>
+                                            <strong>Reg. No:</strong> <?= $row->v_reg_no; ?>
+                                        </div>
+
+                                        <div class="row">
+                                            <div class="col-6 mb-3">
+                                                <label for="book_from_date<?= $row->v_id; ?>" class="form-label">From
+                                                    Date</label>
+                                                <input type="date" onkeydown="return false;" id="book_from_date<?= $row->v_id; ?>" name="book_from_date" class="form-control book-from-date" required>
+                                            </div>
+                                            <div class="col-6 mb-3">
+                                                <label for="book_to_date<?= $row->v_id; ?>" class="form-label">To
+                                                    Date</label>
+                                                <input type="date" onkeydown="return false;" id="book_to_date<?= $row->v_id; ?>" name="book_to_date" class="form-control book-to-date" required>
+                                            </div>
+                                        </div>
+
+                                        <!-- Hidden Inputs -->
                                         <input type="hidden" name="v_id" value="<?= $row->v_id; ?>">
                                         <input type="hidden" name="u_car_type" value="<?= $row->v_category; ?>">
                                         <input type="hidden" name="u_car_regno" value="<?= $row->v_reg_no; ?>">
                                         <input type="hidden" name="u_car_book_status" value="Pending">
                                     </div>
+
                                     <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                        <button type="submit" name="book_vehicle" class="btn btn-success">Confirm Booking</button>
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                            Cancel
+                                        </button>
+                                        <button type="submit" name="book_vehicle" class="btn btn-success">
+                                            Confirm Booking
+                                        </button>
                                     </div>
                                 </form>
                             </div>
                         </div>
                     </div>
+
 
                     <!-- Card -->
                     <div class="col-md-4 mb-4 vehicle-card"
@@ -128,7 +180,8 @@ if ($aid) {
                                     <strong>Seats:</strong> <?= $row->v_pass_no; ?><br>
                                     <strong>Driver:</strong> <?= $row->v_driver; ?>
                                 </p>
-                                <button type="button" class="btn btn-outline-success btn-block" data-bs-toggle="modal" data-bs-target="#bookModal<?= $row->v_id; ?>">
+                                <button type="button" class="btn btn-outline-success btn-block" data-bs-toggle="modal"
+                                        data-bs-target="#bookModal<?= $row->v_id; ?>">
                                     <i class="fa fa-clipboard"></i> Book Vehicle
                                 </button>
                             </div>
@@ -146,7 +199,8 @@ if ($aid) {
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content bg-transparent border-0">
             <div class="modal-body p-0 text-center">
-                <img src="" id="modalImage" class="img-fluid w-100" style="max-height: 90vh; object-fit: contain;" alt="">
+                <img src="" id="modalImage" class="img-fluid w-100" style="max-height: 90vh; object-fit: contain;"
+                     alt="">
             </div>
         </div>
     </div>
@@ -155,6 +209,70 @@ if ($aid) {
 <!-- JS -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    async function fetchBookedDates(vehicleId) {
+        const res = await fetch(`get-booked-dates.php?v_id=${vehicleId}`);
+        return res.json();
+    }
+
+    function buildFlatpickrOptions(bookedRanges, minDate, linkedTo = null) {
+        const disabled = [];
+
+        // Convert ranges to flatpickr format
+        bookedRanges.forEach(range => {
+            disabled.push({
+                from: range.book_from_date,
+                to: range.book_to_date
+            });
+        });
+
+        const options = {
+            minDate: minDate,
+            dateFormat: "Y-m-d",
+            disable: disabled,
+        };
+
+        return options;
+    }
+
+    function setDateLimits(modal) {
+        const today = new Date().toISOString().split('T')[0];
+        const fromInput = modal.querySelector('.book-from-date');
+        const toInput = modal.querySelector('.book-to-date');
+        const vehicleId = modal.querySelector('input[name="v_id"]').value;
+
+        if (!fromInput || !toInput || !vehicleId) return;
+
+        // Initially disable 'To Date' input
+        toInput.disabled = true;
+
+        fetchBookedDates(vehicleId).then(bookedRanges => {
+            const fromPicker = flatpickr(fromInput, buildFlatpickrOptions(bookedRanges, today));
+
+            // Ensure when 'From Date' changes, 'To Date' is enabled
+            fromPicker.config.onChange.push(function(selectedDates, dateStr) {
+                if (selectedDates.length > 0) {
+                    // Enable the 'To Date' input
+                    toInput.disabled = false;
+
+                    // Set 'To Date' min date as 'From Date'
+                    flatpickr(toInput, buildFlatpickrOptions(bookedRanges, dateStr));
+                }
+            });
+        });
+    }
+
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('shown.bs.modal', function () {
+            setDateLimits(modal);
+        });
+    });
+</script>
+
+
+
+
 <script>
     $(function () {
         function filterVehicles() {
@@ -179,5 +297,9 @@ if ($aid) {
         $('#searchInput, #seatFilter, #driverFilter').on('input change', filterVehicles);
     });
 </script>
+
+<!-- Flatpickr JS -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
 </body>
 </html>

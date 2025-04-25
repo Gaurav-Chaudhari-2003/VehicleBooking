@@ -252,3 +252,18 @@ ALTER TABLE `tms_vehicle`
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+
+
+
+CREATE TABLE `tms_booking` (
+    `booking_id` INT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT NOT NULL,
+    `vehicle_id` INT NOT NULL,
+    `book_from_date` DATE NOT NULL,
+    `book_to_date` DATE NOT NULL,
+    `status` ENUM('Pending', 'Approved', 'Cancelled', 'Completed') DEFAULT 'Pending',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`user_id`) REFERENCES `tms_user`(`u_id`),
+    FOREIGN KEY (`vehicle_id`) REFERENCES `tms_vehicle`(`v_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;

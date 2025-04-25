@@ -4,46 +4,42 @@ session_start();
 include('vendor/inc/config.php');
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_booking'])) {
-    $u_id = intval($_POST['u_id']);
+    $booking_id = intval($_POST['booking_id']);
 
-    // Step 1: Get user's booked vehicle registration number
-    $getVehicle = $mysqli->prepare("SELECT u_car_regno, u_car_book_status FROM tms_user WHERE u_id = ?");
-    $getVehicle->bind_param('i', $u_id);
-    $getVehicle->execute();
-    $getResult = $getVehicle->get_result();
+
+    // Step 1: Get the booking ID and vehicle details
+    $getBooking = $mysqli->prepare("SELECT booking_id, vehicle_id, status FROM tms_booking WHERE booking_id = ?");
+    $getBooking->bind_param('i', $booking_id);
+
+    $getBooking->execute();
+    $getResult = $getBooking->get_result();
 
     if ($getResult->num_rows > 0) {
         $userBooking = $getResult->fetch_assoc();
-        $carRegNo = $userBooking['u_car_regno'];
-        $bookingStatus = $userBooking['u_car_book_status'];
+        $bookingId = $userBooking['booking_id'];
+        $vehicleId = $userBooking['vehicle_id'];
+        $bookingStatus = $userBooking['status'];
 
-        // Step 2: Cancel the user booking (set fields to NULL)
-        $query = "UPDATE tms_user SET 
-                  u_car_type = NULL, 
-                  u_car_regno = NULL, 
-                  u_car_bookdate = NULL, 
-                  u_car_book_status = NULL 
-                  WHERE u_id = ?";
-        $stmt = $mysqli->prepare($query);
-        $stmt->bind_param('i', $u_id);
+        // Step 2: Cancel the booking by updating the status to 'Cancelled'
+        $updateBooking = $mysqli->prepare("UPDATE tms_booking SET status = 'Cancelled' WHERE booking_id = ?");
+        $updateBooking->bind_param('i', $bookingId);
 
-        if ($stmt->execute()) {
-            // Step 3: If booking was approved, set vehicle status back to 'Available'
-            if ($bookingStatus === 'Approved' && !empty($carRegNo)) {
-                $updateVehicle = $mysqli->prepare("UPDATE tms_vehicle SET v_status = 'Available' WHERE v_reg_no = ?");
-                $updateVehicle->bind_param('s', $carRegNo);
+        if ($updateBooking->execute()) {
+            // Step 3: If the booking was approved, update the vehicle status back to 'Available'
+            if ($bookingStatus === 'Approved' && !empty($vehicleId)) {
+                $updateVehicle = $mysqli->prepare("UPDATE tms_vehicle SET v_status = 'Available' WHERE v_id = ?");
+                $updateVehicle->bind_param('i', $vehicleId);
                 $updateVehicle->execute();
             }
 
             http_response_code(200);
-            echo "Booking Cancelled";
+            echo "Booking Cancelled Successfully";
         } else {
             http_response_code(500);
             echo "Failed to cancel booking";
         }
     } else {
         http_response_code(404);
-        echo "Booking not found";
+        echo "Booking not found or not in a cancellable state";
     }
 }
-

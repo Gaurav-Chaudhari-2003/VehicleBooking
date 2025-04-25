@@ -32,7 +32,7 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
         .vehicle-card .card:hover { transform: translateY(-4px); }
         .modal-content { border-radius: 12px; }
     </style>
-    <title></title>
+    <title>My Bookings</title>
 </head>
 
 <body>
@@ -50,11 +50,13 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
     <div class="row" id="bookingCards">
         <?php
         $query = "
-            SELECT u.u_id, u.u_fname, u.u_lname, u.u_phone, u.u_car_type, u.u_car_regno, 
-                   u.u_car_bookdate, u.u_car_book_status, v.v_dpic
-            FROM tms_user u
-            JOIN tms_vehicle v ON u.u_car_regno = v.v_reg_no
-            WHERE u.u_id = ? AND u.u_car_book_status IS NOT NULL AND u.u_car_book_status != ''
+            SELECT b.booking_id, b.book_from_date, b.book_to_date, b.status, b.created_at,
+                   v.v_name, v.v_dpic, 
+                   u.u_fname, u.u_lname, u.u_phone, u.u_car_type, u.u_car_regno
+            FROM tms_booking b 
+            JOIN tms_vehicle v ON b.vehicle_id = v.v_id
+            JOIN tms_user u ON b.user_id = u.u_id
+            WHERE u.u_id = ?
         ";
         $stmt = $mysqli->prepare($query);
         $stmt->bind_param('i', $aid);
@@ -70,24 +72,25 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
                         <img src="<?= $imagePath ?>" class="vehicle-img card-img-top"
                              alt="Vehicle Image" data-full="<?= $imagePath ?>">
                         <div class="card-body">
-                            <h5 class="card-title"><?= "{$row->u_fname} {$row->u_lname}" ?></h5>
+                            <h5 class="card-title"><?= "$row->v_name" ?></h5>
+                            <p class="mb-1"><strong>Booking Created Date:</strong> <?= $row->created_at ?></p>
                             <p class="mb-1"><strong>Phone:</strong> <?= $row->u_phone ?></p>
-                            <p class="mb-1"><strong>Vehicle:</strong> <?= "{$row->u_car_type} ({$row->u_car_regno})" ?></p>
-                            <p class="mb-1"><strong>Booking Date:</strong> <?= $row->u_car_bookdate ?></p>
+                            <p class="mb-1"><strong>From Date:</strong> <?= $row->book_from_date ?></p>
+                            <p class="mb-1"><strong>To Date:</strong> <?= $row->book_to_date ?></p>
                             <p class="mb-0">
                                 <strong>Status:</strong>
-                                <?php if ($row->u_car_book_status == "Pending"): ?>
+                                <?php if ($row->status == "Pending"): ?>
                                     <span class="badge bg-warning text-dark">Pending</span>
-                                <?php elseif ($row->u_car_book_status == "Approved"): ?>
+                                <?php elseif ($row->status == "Approved"): ?>
                                     <span class="badge bg-success">Approved</span>
                                 <?php else: ?>
-                                    <span class="badge bg-danger"><?= $row->u_car_book_status ?></span>
+                                    <span class="badge bg-danger"><?= $row->status ?></span>
                                 <?php endif; ?>
                             </p>
                         </div>
                         <div class="card-footer bg-transparent text-end">
-                            <?php if ($row->u_car_book_status == 'Pending'): ?>
-                                <a href="#" class="btn btn-sm btn-danger cancel-booking-btn" data-uid="<?= $row->u_id ?>">
+                            <?php if ($row->status == 'Pending'): ?>
+                                <a href="#" class="btn btn-sm btn-danger cancel-booking-btn" data-booking-id="<?= $row->booking_id ?>">
                                     <i class="fas fa-times-circle"></i> Cancel Booking
                                 </a>
                             <?php endif; ?>
@@ -147,28 +150,26 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
 
 <script>
     $(document).ready(function () {
-        // Image Zoom Modal
         $('.vehicle-img').on('click', function () {
             $('#modalImage').attr('src', $(this).data('full'));
             $('#imageModal').modal('show');
         });
 
-        // Cancel Booking
         let cancelId = null;
         $('.cancel-booking-btn').on('click', function (e) {
             e.preventDefault();
-            cancelId = $(this).data('uid');
+            cancelId = $(this).data('booking-id');
             $('#cancelBookingId').val(cancelId);
             $('#cancelModal').modal('show');
         });
 
         $('#confirmCancelBtn').on('click', function () {
-            const userId = $('#cancelBookingId').val();
+            const bookingId = $('#cancelBookingId').val();
 
             $.ajax({
                 type: 'POST',
-                url: 'user-delete-booking.php',
-                data: { delete_booking: true, u_id: userId },
+                url: 'user-delete-booking.php',  // Corrected path
+                data: { delete_booking: true, booking_id: bookingId },
                 success: function () {
                     $('#cancelModal').modal('hide');
                     swal("Booking Cancelled", "Your booking has been successfully cancelled.", "success")
@@ -182,5 +183,7 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
         });
     });
 </script>
+
+
 </body>
 </html>
