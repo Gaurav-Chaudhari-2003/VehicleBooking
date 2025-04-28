@@ -73,8 +73,8 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
                              alt="Vehicle Image" data-full="<?= $imagePath ?>">
                         <div class="card-body">
                             <h5 class="card-title"><?= "$row->v_name" ?></h5>
+                            <p class="mb-1"><strong>Booking Id:</strong> <?= $row->booking_id ?></p>
                             <p class="mb-1"><strong>Booking Created Date:</strong> <?= $row->created_at ?></p>
-                            <p class="mb-1"><strong>Phone:</strong> <?= $row->u_phone ?></p>
                             <p class="mb-1"><strong>From Date:</strong> <?= $row->book_from_date ?></p>
                             <p class="mb-1"><strong>To Date:</strong> <?= $row->book_to_date ?></p>
                             <p class="mb-0">

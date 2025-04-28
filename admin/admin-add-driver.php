@@ -1,184 +1,127 @@
-<?php
-global $mysqli;
-session_start();
-  include('vendor/inc/config.php');
-  include('vendor/inc/checklogin.php');
-  check_login();
-  $aid=$_SESSION['a_id'];
-  //Add USer
-  if(isset($_POST['add_driver']))
-    {
-
-            $u_fname=$_POST['u_fname'];
-            $u_lname = $_POST['u_lname'];
-            $u_phone=$_POST['u_phone'];
-            $u_addr=$_POST['u_addr'];
-            $u_email=$_POST['u_email'];
-            $u_pwd=$_POST['u_pwd'];
-            $u_category=$_POST['u_category'];
-            $query="insert into tms_user (u_fname, u_lname, u_phone, u_addr, u_category, u_email, u_pwd) values(?,?,?,?,?,?,?)";
-            $stmt = $mysqli->prepare($query);
-            $rc=$stmt->bind_param('sssssss', $u_fname,  $u_lname, $u_phone, $u_addr, $u_category, $u_email, $u_pwd);
-            $stmt->execute();
-                if($stmt)
-                {
-                    $succ = "Driver Added";
-                }
-                else 
-                {
-                    $err = "Please Try Again Later";
-                }
-            }
-?>
 <!DOCTYPE html>
 <html lang="en">
 
-<?php include('vendor/inc/head.php');?>
+<?php include('vendor/inc/head.php'); ?>
 
 <body id="page-top">
- <!--Start Navigation Bar-->
-  <?php include("vendor/inc/nav.php");?>
-  <!--Navigation Bar-->
 
-  <div id="wrapper">
+<div id="wrapper">
 
-    <!-- Sidebar -->
-    <?php include("vendor/inc/sidebar.php");?>
-    <!--End Sidebar-->
     <div id="content-wrapper">
 
-      <div class="container-fluid">
-      <?php if(isset($succ)) {?>
-                        <!--This code for injecting an alert-->
-        <script>
-                    setTimeout(function () 
-                    { 
-                        swal("Success!","<?php echo $succ;?>!","success");
-                    },
-                        100);
-        </script>
+        <div class="container-fluid">
 
-        <?php } ?>
-        <?php if(isset($err)) {?>
-        <!--This code for injecting an alert-->
-        <script>
-                    setTimeout(function () 
-                    { 
-                        swal("Failed!","<?php echo $err;?>!","Failed");
-                    },
-                        100);
-        </script>
+            <?php if (isset($succ)) { ?>
+                <!-- Success Toast -->
+                <script>
+                    setTimeout(function() {
+                        toastr.success("<?php echo $succ; ?>");
+                    }, 100);
+                </script>
+            <?php } ?>
+            <?php if (isset($err)) { ?>
+                <!-- Error Toast -->
+                <script>
+                    setTimeout(function() {
+                        toastr.error("<?php echo $err; ?>");
+                    }, 100);
+                </script>
+            <?php } ?>
 
-        <?php } ?>
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="text-center">Add New Driver</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Add Driver Form -->
+                    <form method="POST" onsubmit="return validateForm()">
+                        <div class="form-group">
+                            <label for="u_fname">First Name</label>
+                            <input type="text" required class="form-control" id="u_fname" name="u_fname" placeholder="Enter First Name">
+                        </div>
+                        <div class="form-group">
+                            <label for="u_lname">Last Name</label>
+                            <input type="text" required class="form-control" id="u_lname" name="u_lname" placeholder="Enter Last Name">
+                        </div>
+                        <div class="form-group">
+                            <label for="u_phone">Contact</label>
+                            <input type="text" required class="form-control" id="u_phone" name="u_phone" placeholder="Enter Contact Number">
+                        </div>
+                        <div class="form-group">
+                            <label for="u_addr">Address</label>
+                            <input type="text" required class="form-control" id="u_addr" name="u_addr" placeholder="Enter Address">
+                        </div>
+                        <div class="form-group" style="display:none">
+                            <label for="u_category">Category</label>
+                            <input type="text" class="form-control" id="u_category" value="Driver" name="u_category">
+                        </div>
+                        <div class="form-group">
+                            <label for="u_email">Email</label>
+                            <input type="email" required class="form-control" id="u_email" name="u_email" placeholder="Enter Email Address">
+                        </div>
+                        <div class="form-group">
+                            <label for="u_pwd">Password</label>
+                            <input type="password" required class="form-control" id="u_pwd" name="u_pwd" placeholder="Enter Password">
+                        </div>
+                        <button type="submit" name="add_driver" class="btn btn-primary btn-block">Add Driver</button>
+                    </form>
+                    <!-- End Form-->
+                </div>
+            </div>
 
-        <!-- Breadcrumbs-->
-        <ol class="breadcrumb">
-          <li class="breadcrumb-item">
-            <a href="#">Drivers</a>
-          </li>
-          <li class="breadcrumb-item active">Add Driver</li>
-        </ol>
-        <hr>
-        <div class="card">
-        <div class="card-header">
-          Add Driver
         </div>
-        <div class="card-body">
-          <!--Add User Form-->
-          <form method ="POST"> 
-            <div class="form-group">
-                <label for="exampleInputEmail1">First Name</label>
-                <input type="text" required class="form-control" id="exampleInputEmail1" name="u_fname">
-            </div>
-            <div class="form-group">
-                <label for="exampleInputEmail1">Last Name</label>
-                <input type="text" class="form-control" id="exampleInputEmail1" name="u_lname">
-            </div>
-            <div class="form-group">
-                <label for="exampleInputEmail1">Contact</label>
-                <input type="text" class="form-control" id="exampleInputEmail1" name="u_phone">
-            </div>
-            <div class="form-group">
-                <label for="exampleInputEmail1">Address</label>
-                <input type="text" class="form-control" id="exampleInputEmail1" name="u_addr">
-            </div>
-
-            <div class="form-group" style="display:none">
-                <label for="exampleInputEmail1">Category</label>
-                <input type="text" class="form-control" id="exampleInputEmail1" value="Driver" name="u_category">
-            </div>
-            /*
-			<div class="form-group">
-                <label for="exampleInputEmail1">Email address</label>
-                <input type="email" class="form-control" name="u_email"">
-            </div>
-			*/
-            <div class="form-group">
-                <label for="exampleInputPassword1">Password</label>
-                <input type="password" class="form-control" name="u_pwd" id="exampleInputPassword1">
-            </div>
-            <button type="submit" name="add_driver" class="btn btn-success">Add Driver</button>
-          </form>
-          <!-- End Form-->
-        </div>
-      </div>
-       
-      <hr>
-     
-
-      <!-- Sticky Footer -->
-      <?php include("vendor/inc/footer.php");?>
+        <!-- /.container-fluid -->
 
     </div>
     <!-- /.content-wrapper -->
 
-  </div>
-  <!-- /#wrapper -->
+</div>
+<!-- /#wrapper -->
 
-  <!-- Scroll to Top Button-->
-  <a class="scroll-to-top rounded" href="#page-top">
-    <i class="fas fa-angle-up"></i>
-  </a>
 
-  <!-- Logout Modal-->
-  <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="exampleModalLabel">Ready to Leave?</h5>
-          <button class="close" type="button" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">×</span>
-          </button>
-        </div>
-        <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
-          <a class="btn btn-danger" href="admin-logout.php">Logout</a>
-        </div>
-      </div>
-    </div>
-  </div>
+<!-- Bootstrap core JavaScript-->
+<script src="vendor/jquery/jquery.min.js"></script>
+<script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
 
-  <!-- Bootstrap core JavaScript-->
-  <script src="vendor/jquery/jquery.min.js"></script>
-  <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<!-- Toastr Notification JavaScript-->
+<script src="vendor/toastr/toastr.min.js"></script>
 
-  <!-- Core plugin JavaScript-->
-  <script src="vendor/jquery-easing/jquery.easing.min.js"></script>
+<!-- Custom scripts for all pages-->
+<script src="vendor/js/sb-admin.min.js"></script>
 
-  <!-- Page level plugin JavaScript-->
-  <script src="vendor/chart.js/Chart.min.js"></script>
-  <script src="vendor/datatables/jquery.dataTables.js"></script>
-  <script src="vendor/datatables/dataTables.bootstrap4.js"></script>
+<script>
+    // Form validation
+    function validateForm() {
+        var email = document.getElementById("u_email").value;
+        var phone = document.getElementById("u_phone").value;
+        var password = document.getElementById("u_pwd").value;
+        if (!validateEmail(email)) {
+            toastr.error("Please enter a valid email address.");
+            return false;
+        }
+        if (!validatePhone(phone)) {
+            toastr.error("Please enter a valid contact number.");
+            return false;
+        }
+        if (password.length < 6) {
+            toastr.error("Password should be at least 6 characters.");
+            return false;
+        }
+        return true;
+    }
 
-  <!-- Custom scripts for all pages-->
-  <script src="vendor/js/sb-admin.min.js"></script>
+    // Validate Email
+    function validateEmail(email) {
+        var regex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
+        return regex.test(email);
+    }
 
-  <!-- Demo scripts for this page-->
-  <script src="vendor/js/demo/datatables-demo.js"></script>
-  <script src="vendor/js/demo/chart-area-demo.js"></script>
- <!--INject Sweet alert js-->
- <script src="vendor/js/swal.js"></script>
+    // Validate Phone
+    function validatePhone(phone) {
+        var regex = /^[0-9]{10}$/;
+        return regex.test(phone);
+    }
+</script>
 
 </body>
 

@@ -13,5 +13,9 @@
     <orderEntry type="library" name="bootstrap.bundle" level="application" />
     <orderEntry type="library" name="sweetalert2" level="application" />
     <orderEntry type="library" name="sweetalert" level="application" />
+    <orderEntry type="library" name="toastr" level="application" />
+    <orderEntry type="library" name="jquery-3.7.0" level="application" />
+    <orderEntry type="library" name="jquery.dataTables" level="application" />
+    <orderEntry type="library" name="dataTables.bootstrap5" level="application" />
   </component>
 </module>

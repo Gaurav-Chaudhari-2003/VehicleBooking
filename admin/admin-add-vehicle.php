@@ -62,13 +62,9 @@ if (isset($_SESSION['err'])) {
 
 <body id="page-top">
 
-<!-- Navigation -->
-<?php include("vendor/inc/nav.php");?>
 
 <div id="wrapper">
 
-    <!-- Sidebar -->
-    <?php include("vendor/inc/sidebar.php");?>
 
     <div id="content-wrapper">
         <div class="container-fluid">
@@ -88,29 +84,23 @@ if (isset($_SESSION['err'])) {
                 </script>
             <?php endif; ?>
 
-            <!-- Breadcrumbs-->
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="#">Vehicles</a></li>
-                <li class="breadcrumb-item active">Add Vehicle</li>
-            </ol>
-
             <div class="card">
                 <div class="card-header">Add Vehicle</div>
                 <div class="card-body">
                     <form method="POST" enctype="multipart/form-data">
                         <div class="form-group">
                             <label for="v_name">Vehicle Name</label>
-                            <input type="text" required class="form-control" id="v_name" name="v_name">
+                            <input type="text" required class="form-control" id="v_name" name="v_name" placeholder="Enter vehicle name">
                         </div>
 
                         <div class="form-group">
                             <label for="v_reg_no">Vehicle Registration Number</label>
-                            <input type="text" class="form-control" id="v_reg_no" name="v_reg_no">
+                            <input type="text" class="form-control" id="v_reg_no" name="v_reg_no" placeholder="Enter vehicle registration number">
                         </div>
 
                         <div class="form-group">
                             <label for="v_pass_no">Number of Seats</label>
-                            <input type="number" min="1" class="form-control" id="v_pass_no" name="v_pass_no">
+                            <input type="number" min="1" class="form-control" id="v_pass_no" name="v_pass_no" placeholder="Enter number of seats">
                         </div>
 
                         <div class="form-group">
@@ -159,33 +149,9 @@ if (isset($_SESSION['err'])) {
                 </div>
             </div>
         </div>
-
-        <!-- Footer -->
-        <?php include("vendor/inc/footer.php");?>
     </div>
 </div>
 
-<!-- Scroll to Top Button-->
-<a class="scroll-to-top rounded" href="#page-top">
-    <i class="fas fa-angle-up"></i>
-</a>
-
-<!-- Logout Modal-->
-<div class="modal fade" id="logoutModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Ready to Leave?</h5>
-                <button class="close" type="button" data-dismiss="modal"><span>×</span></button>
-            </div>
-            <div class="modal-body">Select "Logout" below to end your current session.</div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
-                <a class="btn btn-danger" href="admin-logout.php">Logout</a>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Scripts -->
 <script src="vendor/jquery/jquery.min.js"></script>

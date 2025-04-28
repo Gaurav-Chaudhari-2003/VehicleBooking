@@ -29,13 +29,13 @@ if (isset($_POST['approve_booking'])) {
 <?php include('vendor/inc/head.php'); ?>
 
 <body id="page-top">
-<?php include("vendor/inc/nav.php"); ?>
 <div id="wrapper">
-    <?php include("vendor/inc/sidebar.php"); ?>
 
     <div id="content-wrapper">
+
         <div class="container-fluid">
 
+            <!-- Success/Error Messages -->
             <?php if (isset($succ)) { ?>
                 <script>
                     setTimeout(function () {
@@ -52,14 +52,13 @@ if (isset($_POST['approve_booking'])) {
                 </script>
             <?php } ?>
 
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="#">Bookings</a></li>
-                <li class="breadcrumb-item active">Approve</li>
-            </ol>
-
+            <!-- Approve Booking Card -->
             <div class="card mb-3">
-                <div class="card-header">Approve Booking</div>
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-check-circle"></i> Approve Booking
+                </div>
                 <div class="card-body">
+
                     <?php
                     $booking_id = $_GET['booking_id'];
                     $ret = "SELECT b.*, u.u_fname, u.u_lname, u.u_email, u.u_phone, u.u_addr, v.v_name, v.v_category 
@@ -74,14 +73,18 @@ if (isset($_POST['approve_booking'])) {
                     if ($row = $res->fetch_object()) {
                         ?>
                         <form method="POST">
-                            <div class="form-group">
-                                <label>First Name</label>
-                                <input type="text" readonly class="form-control" value="<?php echo $row->u_fname; ?>">
+                            <!-- User Details -->
+                            <div class="form-row">
+                                <div class="form-group col-md-6">
+                                    <label>First Name</label>
+                                    <input type="text" readonly class="form-control" value="<?php echo $row->u_fname; ?>">
+                                </div>
+                                <div class="form-group col-md-6">
+                                    <label>Last Name</label>
+                                    <input type="text" readonly class="form-control" value="<?php echo $row->u_lname; ?>">
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label>Last Name</label>
-                                <input type="text" readonly class="form-control" value="<?php echo $row->u_lname; ?>">
-                            </div>
+
                             <div class="form-group">
                                 <label>Email</label>
                                 <input type="email" readonly class="form-control" value="<?php echo $row->u_email; ?>">
@@ -94,6 +97,8 @@ if (isset($_POST['approve_booking'])) {
                                 <label>Address</label>
                                 <input type="text" readonly class="form-control" value="<?php echo $row->u_addr; ?>">
                             </div>
+
+                            <!-- Vehicle Details -->
                             <div class="form-group">
                                 <label>Vehicle Name</label>
                                 <input type="text" readonly class="form-control" value="<?php echo $row->v_name; ?>">
@@ -102,14 +107,20 @@ if (isset($_POST['approve_booking'])) {
                                 <label>Vehicle Category</label>
                                 <input type="text" readonly class="form-control" value="<?php echo $row->v_category; ?>">
                             </div>
-                            <div class="form-group">
-                                <label>Booking From Date</label>
-                                <input type="text" readonly class="form-control" value="<?php echo $row->book_from_date; ?>">
+
+                            <!-- Booking Details -->
+                            <div class="form-row">
+                                <div class="form-group col-md-6">
+                                    <label>Booking From Date</label>
+                                    <input type="text" readonly class="form-control" value="<?php echo $row->book_from_date; ?>">
+                                </div>
+                                <div class="form-group col-md-6">
+                                    <label>Booking To Date</label>
+                                    <input type="text" readonly class="form-control" value="<?php echo $row->book_to_date; ?>">
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label>Booking To Date</label>
-                                <input type="text" readonly class="form-control" value="<?php echo $row->book_to_date; ?>">
-                            </div>
+
+                            <!-- Current Status & Status Change -->
                             <div class="form-group">
                                 <label>Current Status</label>
                                 <input type="text" readonly class="form-control" value="<?php echo $row->status; ?>">
@@ -122,21 +133,17 @@ if (isset($_POST['approve_booking'])) {
                                     <option value="Cancelled" <?php if ($row->status == 'Cancelled') echo 'selected'; ?>>Cancelled</option>
                                 </select>
                             </div>
-                            <button type="submit" name="approve_booking" class="btn btn-success">Update Booking</button>
+
+                            <!-- Submit Button -->
+                            <button type="submit" name="approve_booking" class="btn btn-success btn-block">Update Booking</button>
                         </form>
                     <?php } ?>
                 </div>
             </div>
 
         </div>
-
-        <?php include("vendor/inc/footer.php"); ?>
     </div>
 </div>
-
-<a class="scroll-to-top rounded" href="#page-top"><i class="fas fa-angle-up"></i></a>
-
-<?php include("../usr/vendor/inc/logout-modal.php"); ?>
 
 <script src="vendor/jquery/jquery.min.js"></script>
 <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
@@ -144,8 +151,6 @@ if (isset($_POST['approve_booking'])) {
 <script src="vendor/datatables/jquery.dataTables.js"></script>
 <script src="vendor/datatables/dataTables.bootstrap4.js"></script>
 <script src="vendor/js/sb-admin.min.js"></script>
-<script src="vendor/js/demo/datatables-demo.js"></script>
-<script src="vendor/js/demo/chart-area-demo.js"></script>
 <script src="vendor/js/swal.js"></script>
 
 </body>

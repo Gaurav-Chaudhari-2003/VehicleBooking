@@ -1,196 +1,142 @@
 <?php
-  session_start();
-  include('vendor/inc/config.php');
-  include('vendor/inc/checklogin.php');
-  check_login();
-  $aid=$_SESSION['a_id'];
-  //Add USer
-  if(isset($_POST['update_user']))
-    {
-            $u_id= $_GET['u_id'];
-            $u_fname=$_POST['u_fname'];
-            $u_lname = $_POST['u_lname'];
-            $u_phone=$_POST['u_phone'];
-            $u_addr=$_POST['u_addr'];
-            $u_email=$_POST['u_email'];
-            $u_pwd=$_POST['u_pwd'];
-            $u_category=$_POST['u_category'];
-            $query="update tms_user set u_fname=?, u_lname=?, u_phone=?, u_addr=?, u_category=?, u_email=?, u_pwd=? where u_id=?";
-            $stmt = $mysqli->prepare($query);
-            $rc=$stmt->bind_param('sssssssi', $u_fname,  $u_lname, $u_phone, $u_addr, $u_category, $u_email, $u_pwd, $u_id);
-            $stmt->execute();
-                if($stmt)
-                {
-                    $succ = "Driver Updated";
-                }
-                else 
-                {
-                    $err = "Please Try Again Later";
-                }
-            }
+session_start();
+include('vendor/inc/config.php');  // Make sure this file includes the DB connection setup.
+include('vendor/inc/checklogin.php');
+check_login();
+
+// Check if the form is submitted
+if (isset($_POST['update_user'])) {
+    // Get the data from the form
+    $u_id = $_GET['u_id'];
+    $u_fname = $_POST['u_fname'];
+    $u_lname = $_POST['u_lname'];
+    $u_phone = $_POST['u_phone'];
+    $u_addr = $_POST['u_addr'];
+    $u_email = $_POST['u_email'];
+    $u_pwd = $_POST['u_pwd'];
+    $u_category = $_POST['u_category']; // If hidden field is required
+
+    // Prepare and execute the update query
+    $query = "UPDATE tms_user SET u_fname=?, u_lname=?, u_phone=?, u_addr=?, u_category=?, u_email=?, u_pwd=? WHERE u_id=?";
+    $stmt = $mysqli->prepare($query);
+    $stmt->bind_param('sssssssi', $u_fname, $u_lname, $u_phone, $u_addr, $u_category, $u_email, $u_pwd, $u_id);
+
+    if ($stmt->execute()) {
+        $succ = "Driver Updated Successfully!";
+    } else {
+        $err = "Error updating the driver. Please try again later.";
+    }
+}
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 
-<?php include('vendor/inc/head.php');?>
+<?php include('vendor/inc/head.php'); ?>
 
 <body id="page-top">
- <!--Start Navigation Bar-->
-  <?php include("vendor/inc/nav.php");?>
-  <!--Navigation Bar-->
 
-  <div id="wrapper">
+<div id="wrapper">
 
-    <!-- Sidebar -->
-    <?php include("vendor/inc/sidebar.php");?>
-    <!--End Sidebar-->
     <div id="content-wrapper">
 
-      <div class="container-fluid">
-      <?php if(isset($succ)) {?>
-                        <!--This code for injecting an alert-->
-        <script>
-                    setTimeout(function () 
-                    { 
-                        swal("Success!","<?php echo $succ;?>!","success");
-                    },
-                        100);
-        </script>
+        <div class="container-fluid">
 
-        <?php } ?>
-        <?php if(isset($err)) {?>
-        <!--This code for injecting an alert-->
-        <script>
-                    setTimeout(function () 
-                    { 
-                        swal("Failed!","<?php echo $err;?>!","Failed");
-                    },
-                        100);
-        </script>
+            <!-- Success or Error Toasts -->
+            <?php if(isset($succ)) { ?>
+                <script>
+                    setTimeout(function () {
+                        toastr.success("<?php echo $succ;?>");
+                    }, 100);
+                </script>
+            <?php } ?>
 
-        <?php } ?>
+            <?php if(isset($err)) { ?>
+                <script>
+                    setTimeout(function () {
+                        toastr.error("<?php echo $err;?>");
+                    }, 100);
+                </script>
+            <?php } ?>
 
-        <!-- Breadcrumbs-->
-        <ol class="breadcrumb">
-          <li class="breadcrumb-item">
-            <a href="#">Drivers</a>
-          </li>
-          <li class="breadcrumb-item active">Add Driver</li>
-        </ol>
-        <hr>
-        <div class="card">
-        <div class="card-header">
-          Add User
+            <div class="card shadow-lg">
+                <div class="card-header text-center bg-primary text-white">
+                    <h4>Update Driver Details</h4>
+                </div>
+                <div class="card-body">
+
+                    <!-- Add User Form -->
+                    <?php
+                    $aid = $_GET['u_id'];
+                    $ret = "SELECT * FROM tms_user WHERE u_id=?";
+                    $stmt = $mysqli->prepare($ret);
+                    $stmt->bind_param('i', $aid);
+                    $stmt->execute();
+                    $res = $stmt->get_result();
+                    while ($row = $res->fetch_object()) {
+                        ?>
+                        <form method="POST">
+                            <div class="form-group">
+                                <label for="u_fname">First Name</label>
+                                <input type="text" class="form-control" id="u_fname" name="u_fname" value="<?php echo $row->u_fname;?>" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="u_lname">Last Name</label>
+                                <input type="text" class="form-control" id="u_lname" name="u_lname" value="<?php echo $row->u_lname;?>" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="u_phone">Contact Number</label>
+                                <input type="text" class="form-control" id="u_phone" name="u_phone" value="<?php echo $row->u_phone;?>" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="u_addr">Address</label>
+                                <input type="text" class="form-control" id="u_addr" name="u_addr" value="<?php echo $row->u_addr;?>" required>
+                            </div>
+
+                            <div class="form-group" style="display:none;">
+                                <label for="u_category">Category</label>
+                                <input type="text" class="form-control" id="u_category" name="u_category" value="Driver">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="u_email">Email Address</label>
+                                <input type="email" class="form-control" id="u_email" name="u_email" value="<?php echo $row->u_email;?>" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="u_pwd">Password</label>
+                                <input type="password" class="form-control" id="u_pwd" name="u_pwd" value="<?php echo $row->u_pwd;?>" required>
+                            </div>
+
+                            <button type="submit" name="update_user" class="btn btn-success btn-block shadow-sm">Update Driver</button>
+                        </form>
+                    <?php } ?>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-          <!--Add User Form-->
-          <?php
-            $aid=$_GET['u_id'];
-            $ret="select * from tms_user where u_id=?";
-            $stmt= $mysqli->prepare($ret) ;
-            $stmt->bind_param('i',$aid);
-            $stmt->execute() ;//ok
-            $res=$stmt->get_result();
-            //$cnt=1;
-            while($row=$res->fetch_object())
-        {
-        ?>
-          <form method ="POST"> 
-            <div class="form-group">
-                <label for="exampleInputEmail1">First Name</label>
-                <input type="text" value="<?php echo $row->u_fname;?>" required class="form-control" id="exampleInputEmail1" name="u_fname">
-            </div>
-            <div class="form-group">
-                <label for="exampleInputEmail1">Last Name</label>
-                <input type="text" class="form-control" value="<?php echo $row->u_lname;?>" id="exampleInputEmail1" name="u_lname">
-            </div>
-            <div class="form-group">
-                <label for="exampleInputEmail1">Contact</label>
-                <input type="text" class="form-control" value="<?php echo $row->u_phone;?>" id="exampleInputEmail1" name="u_phone">
-            </div>
-            <div class="form-group">
-                <label for="exampleInputEmail1">Address</label>
-                <input type="text" class="form-control" value="<?php echo $row->u_addr;?>" id="exampleInputEmail1" name="u_addr">
-            </div>
-
-            <div class="form-group" style="display:none">
-                <label for="exampleInputEmail1">Category</label>
-                <input type="text" class="form-control" id="exampleInputEmail1" value="Driver" name="u_category">
-            </div>
-            
-           <div class="form-group">
-                <label for="exampleInputEmail1">Email address</label>
-                <input type="email" value="<?php echo $row->u_email;?>" class="form-control" name="u_email"">
-            </div>
-	
-            <div class="form-group">
-                <label for="exampleInputPassword1">Password</label>
-                <input type="password" class="form-control" value="<?php echo $row->u_pwd;?>" name="u_pwd" id="exampleInputPassword1">
-            </div>
-
-            <button type="submit" name="update_user" class="btn btn-success">Update Driver</button>
-          </form>
-          <!-- End Form-->
-        <?php }?>
-        </div>
-      </div>
-       
-      <hr>
-     
-
-      <!-- Sticky Footer -->
-      <?php include("vendor/inc/footer.php");?>
 
     </div>
-    <!-- /.content-wrapper -->
+</div>
 
-  </div>
-  <!-- /#wrapper -->
+<!-- Bootstrap core JavaScript-->
+<script src="vendor/jquery/jquery.min.js"></script>
+<script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
 
-  <!-- Scroll to Top Button-->
-  <a class="scroll-to-top rounded" href="#page-top">
-    <i class="fas fa-angle-up"></i>
-  </a>
+<!-- Core plugin JavaScript-->
+<script src="vendor/jquery-easing/jquery.easing.min.js"></script>
 
-  <!-- Logout Modal-->
-  <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="exampleModalLabel">Ready to Leave?</h5>
-          <button class="close" type="button" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">×</span>
-          </button>
-        </div>
-        <div class="modal-body">Select "Logout" below if you are ready to end your current session.</div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancel</button>
-          <a class="btn btn-danger" href="admin-logout.php">Logout</a>
-        </div>
-      </div>
-    </div>
-  </div>
+<!-- Custom scripts for all pages-->
+<script src="vendor/js/sb-admin.min.js"></script>
 
-  <!-- Bootstrap core JavaScript-->
-  <script src="vendor/jquery/jquery.min.js"></script>
-  <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<!-- Sweet Alert JS -->
+<script src="vendor/js/swal.js"></script>
 
-  <!-- Core plugin JavaScript-->
-  <script src="vendor/jquery-easing/jquery.easing.min.js"></script>
-
-  <!-- Page level plugin JavaScript-->
-  <script src="vendor/chart.js/Chart.min.js"></script>
-  <script src="vendor/datatables/jquery.dataTables.js"></script>
-  <script src="vendor/datatables/dataTables.bootstrap4.js"></script>
-
-  <!-- Custom scripts for all pages-->
-  <script src="vendor/js/sb-admin.min.js"></script>
-
-  <!-- Demo scripts for this page-->
-  <script src="vendor/js/demo/datatables-demo.js"></script>
-  <script src="vendor/js/demo/chart-area-demo.js"></script>
- <!--INject Sweet alert js-->
- <script src="vendor/js/swal.js"></script>
+<!-- Toastr JS for Toast notifications -->
+<script src="https://cdn.jsdelivr.net/npm/toastr@2.1.4/build/toastr.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/toastr@2.1.4/build/toastr.min.css" rel="stylesheet">
 
 </body>
 
