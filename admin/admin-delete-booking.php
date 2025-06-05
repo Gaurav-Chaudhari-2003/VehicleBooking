@@ -6,20 +6,30 @@ include('vendor/inc/checklogin.php');
 check_login();
 $aid = $_SESSION['a_id'];
 
-// Delete Booking
-if(isset($_POST['delete_booking'])) {
-    $booking_id = $_GET['booking_id']; // Get the booking ID to delete
+// Handle Actions
+if (isset($_GET['action']) && isset($_GET['booking_id'])) {
+    $action = $_GET['action'];
+    $booking_id = intval($_GET['booking_id']);
+    $query = "";
 
-    // Prepare SQL to delete the booking from the tms_booking table
-    $query = "UPDATE tms_booking SET status = 'Cancelled' WHERE booking_id = ?";
+    if ($action == 'approve') {
+        $query = "UPDATE tms_booking SET status = 'Approved' WHERE booking_id = ?";
+    } elseif ($action == 'reject') {
+        $query = "UPDATE tms_booking SET status = 'Rejected' WHERE booking_id = ?";
+    } elseif ($action == 'complete') {
+        $query = "UPDATE tms_booking SET status = 'Completed' WHERE booking_id = ?";
+    } elseif ($action == 'delete') {
+        $query = "DELETE FROM tms_booking WHERE booking_id = ?";
+    }
+
     $stmt = $mysqli->prepare($query);
     $stmt->bind_param('i', $booking_id);
     $stmt->execute();
 
-    if($stmt) {
-        $succ = "Booking Deleted Successfully";
+    if ($stmt) {
+        $succ = "Operation Successful!";
     } else {
-        $err = "Please Try Again Later";
+        $err = "Operation Failed. Please Try Again.";
     }
 }
 ?>
@@ -37,7 +47,9 @@ if(isset($_POST['delete_booking'])) {
             <?php if (isset($succ)) { ?>
                 <script>
                     setTimeout(function () {
-                        swal("Success!", "<?php echo $succ; ?>", "success");
+                        swal("Success!", "<?php echo $succ; ?>", "success").then(() => {
+                            window.location.href = "admin-dashboard.php"; // Redirect back to bookings page
+                        });
                     }, 100);
                 </script>
             <?php } ?>
@@ -52,59 +64,73 @@ if(isset($_POST['delete_booking'])) {
 
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
-                    <h5 class="m-0 font-weight-bold text-primary">Delete Booking</h5>
+                    <h5 class="m-0 font-weight-bold text-primary">Manage Booking</h5>
                 </div>
                 <div class="card-body">
-                    <!-- Booking Details -->
                     <?php
-                    $booking_id = $_GET['booking_id'];
-                    $ret = "SELECT b.*, u.u_fname, u.u_lname, u.u_phone, u.u_addr, v.v_name, v.v_category, v.v_reg_no
-                            FROM tms_booking b
-                            JOIN tms_user u ON b.user_id = u.u_id
-                            JOIN tms_vehicle v ON b.vehicle_id = v.v_id
-                            WHERE b.booking_id = ?";
-                    $stmt = $mysqli->prepare($ret);
-                    $stmt->bind_param('i', $booking_id);
-                    $stmt->execute();
-                    $res = $stmt->get_result();
+                    if (isset($_GET['booking_id'])) {
+                        $booking_id = intval($_GET['booking_id']);
+                        $ret = "SELECT b.*, u.u_fname, u.u_lname, u.u_phone, u.u_addr, v.v_name, v.v_category, v.v_reg_no
+                                FROM tms_booking b
+                                JOIN tms_user u ON b.user_id = u.u_id
+                                JOIN tms_vehicle v ON b.vehicle_id = v.v_id
+                                WHERE b.booking_id = ?";
+                        $stmt = $mysqli->prepare($ret);
+                        $stmt->bind_param('i', $booking_id);
+                        $stmt->execute();
+                        $res = $stmt->get_result();
 
-                    while($row = $res->fetch_object()) {
-                        ?>
-                        <form method="POST">
-                            <div class="form-group">
-                                <label for="u_fname">First Name</label>
-                                <input type="text" readonly value="<?php echo $row->u_fname; ?>" class="form-control">
-                            </div>
-                            <div class="form-group">
-                                <label for="u_lname">Last Name</label>
-                                <input type="text" readonly value="<?php echo $row->u_lname; ?>" class="form-control">
-                            </div>
-                            <div class="form-group">
-                                <label for="u_phone">Contact</label>
-                                <input type="text" readonly value="<?php echo $row->u_phone; ?>" class="form-control">
-                            </div>
-                            <div class="form-group">
-                                <label for="u_car_type">Vehicle Category</label>
-                                <input type="text" readonly value="<?php echo $row->v_category; ?>" class="form-control">
-                            </div>
-                            <div class="form-group">
-                                <label for="u_car_regno">Vehicle Registration Number</label>
-                                <input type="text" readonly value="<?php echo $row->v_reg_no; ?>" class="form-control">
-                            </div>
-                            <div class="form-group">
-                                <label for="u_car_bookdate">Booking Date</label>
-                                <input type="text" readonly value="<?php echo $row->created_at; ?>" class="form-control">
-                            </div>
-                            <div class="form-group">
-                                <label for="u_car_book_status">Booking Status</label>
-                                <input type="text" readonly value="<?php echo $row->status; ?>" class="form-control">
-                            </div>
+                        if($row = $res->fetch_object()) {
+                            ?>
+                            <form>
+                                <div class="form-group">
+                                    <label>First Name</label>
+                                    <input type="text" readonly value="<?php echo $row->u_fname; ?>" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Last Name</label>
+                                    <input type="text" readonly value="<?php echo $row->u_lname; ?>" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Contact</label>
+                                    <input type="text" readonly value="<?php echo $row->u_phone; ?>" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Vehicle Category</label>
+                                    <input type="text" readonly value="<?php echo $row->v_category; ?>" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Vehicle Registration Number</label>
+                                    <input type="text" readonly value="<?php echo $row->v_reg_no; ?>" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Booking Date</label>
+                                    <input type="text" readonly value="<?php echo $row->created_at; ?>" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Booking Status</label>
+                                    <input type="text" readonly value="<?php echo $row->status; ?>" class="form-control">
+                                </div>
 
-                            <div class="form-group text-center">
-                                <button type="submit" name="delete_booking" class="btn btn-danger btn-lg">Delete Booking</button>
-                            </div>
-                        </form>
-                    <?php }?>
+                                <div class="form-group text-center">
+                                    <?php if ($row->status == 'Pending') { ?>
+                                        <button type="button" class="btn btn-success btn-lg" onclick="confirmAction('approve', <?php echo $booking_id; ?>)">Approve</button>
+                                        <button type="button" class="btn btn-danger btn-lg" onclick="confirmAction('reject', <?php echo $booking_id; ?>)">Reject</button>
+                                    <?php } elseif ($row->status == 'Approved') { ?>
+                                        <button type="button" class="btn btn-primary btn-lg" onclick="confirmAction('complete', <?php echo $booking_id; ?>)">Mark as Completed</button>
+                                    <?php } elseif (in_array($row->status, ['Cancelled', 'Rejected', 'Completed'])) { ?>
+                                        <button type="button" class="btn btn-danger btn-lg" onclick="confirmAction('delete', <?php echo $booking_id; ?>)">Delete Entry</button>
+                                    <?php } ?>
+                                </div>
+                            </form>
+                            <?php
+                        } else {
+                            echo "<div class='text-danger'>Booking not found!</div>";
+                        }
+                    } else {
+                        echo "<div class='text-danger'>Invalid Access!</div>";
+                    }
+                    ?>
                 </div>
             </div>
 
@@ -125,6 +151,44 @@ if(isset($_POST['delete_booking'])) {
 
 <!-- Sweet alert JS -->
 <script src="vendor/js/swal.js"></script>
+
+<script>
+    function confirmAction(action, booking_id) {
+        let actionText = '';
+        let actionUrl = '';
+
+        switch(action) {
+            case 'approve':
+                actionText = "approve this booking";
+                actionUrl = "admin-delete-booking.php?action=approve&booking_id=" + booking_id;
+                break;
+            case 'reject':
+                actionText = "reject this booking";
+                actionUrl = "admin-delete-booking.php?action=reject&booking_id=" + booking_id;
+                break;
+            case 'complete':
+                actionText = "mark this booking as completed";
+                actionUrl = "admin-delete-booking.php?action=complete&booking_id=" + booking_id;
+                break;
+            case 'delete':
+                actionText = "delete this booking permanently";
+                actionUrl = "admin-delete-booking.php?action=delete&booking_id=" + booking_id;
+                break;
+        }
+
+        swal({
+            title: "Are you sure?",
+            text: "You are about to " + actionText + ". This action cannot be undone!",
+            icon: "warning",
+            buttons: true,
+            dangerMode: true,
+        }).then((willAct) => {
+            if (willAct) {
+                window.location.href = actionUrl;
+            }
+        });
+    }
+</script>
 
 </body>
 </html>

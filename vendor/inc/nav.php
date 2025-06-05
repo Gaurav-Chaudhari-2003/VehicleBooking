@@ -9,7 +9,8 @@
           <li class="nav-item">
             <a class="nav-link" href="about.php">About</a>
           </li>
-                    <li class="nav-item">
+
+            <li class="nav-item">
             <a class="nav-link" href="contact.php">Contact</a>
           </li>
 
@@ -17,15 +18,17 @@
             <a class="nav-link" href="gallery.php">Gallery</a>
           </li>
 
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownBlog" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-               Login Panel
-            </a>
-            <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownBlog">
-              <a class="dropdown-item" href="admin/">Admin Login</a>
-              <a class="dropdown-item" href="usr/user-login.php">Client Login</a>
-            </div>
-          </li>
+            <li class="nav-item">
+                <a class="nav-link" href="admin/">Admin Login</a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link" href="usr/user-login.php">User Login</a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link" href="usr/usr-register.php">Register New User</a>
+            </li>
         </ul>
       </div>
     </div>

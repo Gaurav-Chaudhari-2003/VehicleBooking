@@ -262,8 +262,21 @@ CREATE TABLE `tms_booking` (
     `vehicle_id` INT NOT NULL,
     `book_from_date` DATE NOT NULL,
     `book_to_date` DATE NOT NULL,
-    `status` ENUM('Pending', 'Approved', 'Cancelled', 'Completed') DEFAULT 'Pending',
+    `status` ENUM('Pending', 'Approved', 'Cancelled', 'Completed', 'Rejected') DEFAULT 'Pending',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`user_id`) REFERENCES `tms_user`(`u_id`),
     FOREIGN KEY (`vehicle_id`) REFERENCES `tms_vehicle`(`v_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+CREATE TABLE tms_pending_user (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    u_fname VARCHAR(255),
+    u_lname VARCHAR(255),
+    u_phone VARCHAR(20),
+    u_addr TEXT,
+    u_category VARCHAR(50),
+    u_email VARCHAR(255) UNIQUE,
+    u_pwd VARCHAR(255),
+    request_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+

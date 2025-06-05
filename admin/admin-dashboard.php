@@ -1,9 +1,25 @@
 <?php
 session_start();
+
+// Handle logout on POST request
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['logout'])) {
+    session_unset();
+    session_destroy();
+    header("Location: /VehicleBooking/index.php");
+    exit;
+}
+
+// Include configs and auth
 require_once 'vendor/inc/config.php';
 require_once 'vendor/inc/checklogin.php';
 check_login();
-$aid = $_SESSION['a_id'];
+$aid = $_SESSION['a_id'] ?? null;
+
+// Redirect if not logged in
+if (!$aid) {
+    header("Location: /VehicleBooking/index.php");
+    exit;
+}
 
 // Fetch admin profile
 $admin = null;
@@ -19,9 +35,7 @@ function count_items($table, $where = null, $param = null) {
     global $mysqli;
     $query = "SELECT COUNT(*) FROM $table" . ($where ? " WHERE $where = ?" : "");
     $stmt = $mysqli->prepare($query);
-    if ($where) {
-        $stmt->bind_param("s", $param);
-    }
+    if ($where) $stmt->bind_param("s", $param);
     $stmt->execute();
     $stmt->bind_result($count);
     $stmt->fetch();
@@ -33,9 +47,9 @@ $user_count = count_items('tms_user', 'u_category', 'User');
 $driver_count = count_items('tms_user', 'u_category', 'Driver');
 $vehicle_count = count_items('tms_vehicle');
 
-// Set timezone once
 date_default_timezone_set("Asia/Kolkata");
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -86,13 +100,126 @@ date_default_timezone_set("Asia/Kolkata");
             <h2 class="fw-bold text-dark mb-1">Admin Dashboard</h2>
             <p class="text-muted mb-0">Manage the Vehicle Booking System efficiently</p>
         </div>
-        <div class="profile-card d-flex align-items-center gap-3 hover-translate">
-            <i class="fas fa-user-shield fa-2x text-primary"></i>
-            <div>
-                <h6 class="mb-0 text-dark"><?= htmlspecialchars($admin->a_name ?? 'Admin'); ?></h6>
-                <small class="text-muted"><?= htmlspecialchars($admin->a_email ?? ''); ?></small>
+        <!-- Profile Card with Logout Dropdown -->
+        <div class="profile-container">
+            <div class="profile-card d-flex align-items-center justify-content-between gap-3 hover-translate p-2 bg-white rounded-3 shadow-sm" id="profileToggle">
+                <div class="d-flex align-items-center gap-3">
+                    <i class="fas fa-user-shield fa-2x text-primary"></i>
+                    <div>
+                        <h6 class="mb-0 text-dark"><?= htmlspecialchars($admin->a_name ?? 'Admin'); ?></h6>
+                        <small class="text-muted"><?= htmlspecialchars($admin->a_email ?? ''); ?></small>
+                    </div>
+                </div>
+                <!-- ▼ Arrow Icon to suggest dropdown -->
+                <i id="profileArrow" class="fas fa-chevron-down text-muted transition"></i>
             </div>
+
+            <!-- Logout Drawer -->
+            <div id="logoutDrawer" class="logout-drawer">
+                <form method="post" class="m-0">
+                    <button type="submit" name="logout">Logout</button>
+                </form>
+            </div>
+
         </div>
+
+
+        <style>
+            .profile-container {
+                position: relative;
+                width: fit-content;
+                z-index: 10;
+                cursor: pointer;
+            }
+
+            .profile-card {
+                position: relative;
+                z-index: 20;
+                transition: box-shadow 0.3s;
+            }
+
+            /* Glow on hover to hint interaction */
+            .profile-card:hover {
+                box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
+            }
+
+            /* Arrow animation */
+            #profileArrow {
+                transition: transform 0.3s ease;
+            }
+
+            .logout-drawer.active + #profileArrow {
+                transform: rotate(180deg);
+            }
+
+            /* Logout drawer (unchanged from before) */
+            .logout-drawer {
+                position: absolute;
+                top: 100%;
+                right: 0;
+                margin-top: -8px;
+                background: #fff;
+                border: 1px solid #ddd;
+                border-radius: 0.75rem;
+                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+                width: 100%;
+                transform: translateY(-20px) scale(0.95);
+                opacity: 0;
+                visibility: hidden;
+                transition: opacity 0.3s ease, transform 0.3s ease;
+                z-index: 5;
+                overflow: hidden;
+            }
+
+            .logout-drawer.active {
+                transform: translateY(8px) scale(1);
+                opacity: 1;
+                visibility: visible;
+            }
+
+            .logout-drawer button {
+                border: none;
+                background: #f8f9fa;
+                width: 100%;
+                padding: 10px;
+                font-weight: 500;
+                border-radius: 0.75rem;
+                transition: background 0.3s;
+            }
+
+            .logout-drawer button:hover {
+                background: #dc3545;
+                color: #fff;
+            }
+
+        </style>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const toggle = document.getElementById('profileToggle');
+                const drawer = document.getElementById('logoutDrawer');
+                const arrow = document.getElementById('profileArrow');
+
+                toggle.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    drawer.classList.toggle('active');
+                    arrow.classList.toggle('rotated');
+                });
+
+                document.addEventListener('click', function (e) {
+                    if (!toggle.contains(e.target) && !drawer.contains(e.target)) {
+                        drawer.classList.remove('active');
+                        arrow.classList.remove('rotated');
+                    }
+                });
+            });
+
+        </script>
+
+
+
+
+
     </div>
 
     <!-- Dashboard Cards -->
@@ -163,12 +290,21 @@ date_default_timezone_set("Asia/Kolkata");
                                 <td><?= htmlspecialchars($row->v_reg_no); ?></td>
                                 <td><?= htmlspecialchars($row->created_at); ?></td>
                                 <td><?= date("d M Y", strtotime($row->book_from_date)) . " → " . date("d M Y", strtotime($row->book_to_date)); ?></td>
+                                <?php
+                                $statusClass = [
+                                    'Pending' => 'warning text-dark',
+                                    'Approved' => 'success',
+                                    'Completed' => 'secondary',
+                                    'Rejected' => 'danger',
+                                    'Cancelled' => 'danger'
+                                ];
+                                ?>
                                 <td>
-                                <span class="badge bg-<?=
-                                $row->status == 'Pending' ? 'warning text-dark' :
-                                    ($row->status == 'Approved' ? 'success' : 'danger')
-                                ?>"><?= htmlspecialchars($row->status); ?></span>
+                                    <span class="badge bg-<?= $statusClass[$row->status] ?? 'secondary'; ?>">
+                                        <?= htmlspecialchars($row->status); ?>
+                                    </span>
                                 </td>
+
                                 <td>
                                     <?php if ($row->status == "Pending"): ?>
                                         <a href="admin-approve-booking.php?booking_id=<?= $row->booking_id; ?>" class="btn btn-success btn-sm">

@@ -5,7 +5,7 @@ include('vendor/inc/checklogin.php');
 check_login();
 $aid = $_SESSION['a_id'];
 
-// Handle Add User
+// Handle Add User (Admin manually adding a user)
 if (isset($_POST['add_user'])) {
     $u_fname = $_POST['u_fname'];
     $u_lname = $_POST['u_lname'];
@@ -13,7 +13,7 @@ if (isset($_POST['add_user'])) {
     $u_addr = $_POST['u_addr'];
     $u_email = $_POST['u_email'];
     $u_pwd = $_POST['u_pwd'];
-    $u_category = "User"; // Default
+    $u_category = "User";
 
     $query = "INSERT INTO tms_user (u_fname, u_lname, u_phone, u_addr, u_category, u_email, u_pwd) VALUES (?, ?, ?, ?, ?, ?, ?)";
     $stmt = $mysqli->prepare($query);
@@ -37,6 +37,44 @@ if (isset($_GET['del'])) {
         $err = "Unable to Delete User";
     }
 }
+
+// Approve pending user
+if (isset($_GET['approve'])) {
+    $id = intval($_GET['approve']);
+    $query = "SELECT * FROM tms_pending_user WHERE id = ?";
+    $stmt = $mysqli->prepare($query);
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result->num_rows > 0) {
+        $user = $result->fetch_assoc();
+        $insert = "INSERT INTO tms_user (u_fname, u_lname, u_phone, u_addr, u_category, u_email, u_pwd) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $stmt2 = $mysqli->prepare($insert);
+        $stmt2->bind_param('sssssss', $user['u_fname'], $user['u_lname'], $user['u_phone'], $user['u_addr'], $user['u_category'], $user['u_email'], $user['u_pwd']);
+        if ($stmt2->execute()) {
+            $delete = $mysqli->prepare("DELETE FROM tms_pending_user WHERE id = ?");
+            $delete->bind_param("i", $id);
+            $delete->execute();
+            $succ = "User Approved Successfully";
+        } else {
+            $err = "Failed to Approve User";
+        }
+    } else {
+        $err = "User Not Found";
+    }
+}
+
+// Reject pending user
+if (isset($_GET['reject'])) {
+    $id = intval($_GET['reject']);
+    $stmt = $mysqli->prepare("DELETE FROM tms_pending_user WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    if ($stmt->execute()) {
+        $succ = "User Rejected and Removed Successfully";
+    } else {
+        $err = "Failed to Reject User";
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -47,27 +85,28 @@ if (isset($_GET['del'])) {
 <body id="page-top">
 
 <div id="wrapper">
-
     <div id="content-wrapper">
         <div class="container-fluid">
 
-            <!-- Success or Error Message -->
-            <?php if (isset($succ)) { ?>
+            <?php if (isset($_SESSION['succ'])) { ?>
                 <script>
                     setTimeout(function() {
-                        swal("Success!", "<?php echo $succ; ?>", "success");
+                        swal("Success!", "<?php echo $_SESSION['succ']; ?>", "success");
                     }, 100);
                 </script>
-            <?php } ?>
-            <?php if (isset($err)) { ?>
-                <script>
-                    setTimeout(function() {
-                        swal("Failed!", "<?php echo $err; ?>", "error");
-                    }, 100);
-                </script>
+                <?php unset($_SESSION['succ']); ?>
             <?php } ?>
 
-            <!-- Add User Form -->
+            <?php if (isset($_SESSION['err'])) { ?>
+                <script>
+                    setTimeout(function() {
+                        swal("Failed!", "<?php echo $_SESSION['err']; ?>", "error");
+                    }, 100);
+                </script>
+                <?php unset($_SESSION['err']); ?>
+            <?php } ?>
+
+
             <div class="card mb-3">
                 <div class="card-header">
                     <i class="fas fa-user-plus"></i> Add New User
@@ -77,9 +116,52 @@ if (isset($_GET['del'])) {
                 </div>
             </div>
 
+            <!-- Pending Approvals -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <i class="fas fa-user-clock"></i> Pending User Approvals
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover table-striped" width="100%">
+                            <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Name</th>
+                                <th>Contact</th>
+                                <th>Address</th>
+                                <th>Email</th>
+                                <th>Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <?php
+                            $ret = "SELECT * FROM tms_pending_user ORDER BY id DESC";
+                            $stmt = $mysqli->prepare($ret);
+                            $stmt->execute();
+                            $res = $stmt->get_result();
+                            $cnt = 1;
+                            while ($row = $res->fetch_object()) {
+                                ?>
+                                <tr>
+                                    <td><?php echo $cnt++; ?></td>
+                                    <td><?php echo $row->u_fname . " " . $row->u_lname; ?></td>
+                                    <td><?php echo $row->u_phone; ?></td>
+                                    <td><?php echo $row->u_addr; ?></td>
+                                    <td><?php echo $row->u_email; ?></td>
+                                    <td>
+                                        <a href="?approve=<?php echo $row->id; ?>" class="badge badge-success" onclick="return confirm('Approve this user?');">Approve</a>
+                                        <a href="?reject=<?php echo $row->id; ?>" class="badge badge-danger" onclick="return confirm('Reject this user?');">Reject</a>
+                                    </td>
+                                </tr>
+                            <?php } ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
 
-
-            <!-- View Users -->
+            <!-- Registered Users -->
             <div class="card mb-3">
                 <div class="card-header">
                     <i class="fas fa-users"></i> Registered Users
@@ -107,7 +189,7 @@ if (isset($_GET['del'])) {
                             while ($row = $res->fetch_object()) {
                                 ?>
                                 <tr>
-                                    <td><?php echo $cnt; ?></td>
+                                    <td><?php echo $cnt++; ?></td>
                                     <td><?php echo $row->u_fname . " " . $row->u_lname; ?></td>
                                     <td><?php echo $row->u_phone; ?></td>
                                     <td><?php echo $row->u_addr; ?></td>
@@ -117,8 +199,7 @@ if (isset($_GET['del'])) {
                                         <a href="?del=<?php echo $row->u_id; ?>" class="badge badge-danger" onclick="return confirm('Do you really want to delete this user?');"><i class="fa fa-trash"></i> Delete</a>
                                     </td>
                                 </tr>
-                                <?php $cnt++;
-                            } ?>
+                            <?php } ?>
                             </tbody>
                         </table>
                     </div>
@@ -132,7 +213,6 @@ if (isset($_GET['del'])) {
             </div>
 
         </div>
-
     </div>
 </div>
 
