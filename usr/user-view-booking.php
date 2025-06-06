@@ -50,14 +50,16 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
     <div class="row" id="bookingCards">
         <?php
         $query = "
-            SELECT b.booking_id, b.book_from_date, b.book_to_date, b.status, b.created_at,
-                   v.v_name, v.v_dpic, 
-                   u.u_fname, u.u_lname, u.u_phone, u.u_car_type, u.u_car_regno
+            SELECT b.booking_id, b.book_from_date, b.book_to_date, b.status, b.created_at, b.remarks, b.admin_remarks,
+               v.v_name, v.v_dpic, 
+               u.u_fname, u.u_lname, u.u_phone, u.u_car_type, u.u_car_regno
             FROM tms_booking b 
             JOIN tms_vehicle v ON b.vehicle_id = v.v_id
             JOIN tms_user u ON b.user_id = u.u_id
             WHERE u.u_id = ?
+
         ";
+
         $stmt = $mysqli->prepare($query);
         $stmt->bind_param('i', $aid);
         $stmt->execute();
@@ -77,7 +79,30 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
                             <p class="mb-1"><strong>Booking Created Date:</strong> <?= $row->created_at ?></p>
                             <p class="mb-1"><strong>From Date:</strong> <?= $row->book_from_date ?></p>
                             <p class="mb-1"><strong>To Date:</strong> <?= $row->book_to_date ?></p>
-                            <p class="mb-0">
+                            <?php
+                                $fullRemarks = htmlspecialchars($row->remarks);
+                                $shortRemarks = strlen($fullRemarks) > 20 ? substr($fullRemarks, 0, 20) . '...' : $fullRemarks;
+                                ?>
+                                <p class="mb-1">
+                                    <strong>Message:</strong>
+                                    <span class="remarks-text" data-full="<?= $fullRemarks ?>">
+                                <?= $shortRemarks ?>
+                                        <?php if (strlen($fullRemarks) > 20): ?>
+                                            <a href="#" class="text-primary toggle-remarks" style="font-size: 0.875rem;">Read more</a>
+                                        <?php endif; ?>
+                                </span>
+                            </p>
+
+                            <?php if (!empty($row->admin_remarks)): ?>
+                                <p class="mb-1">
+                                    <strong>Admin Remark:</strong> <?= htmlspecialchars($row->admin_remarks); ?>
+                                </p>
+                            <?php endif; ?>
+
+
+                        </div>
+                        <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
+                            <div>
                                 <strong>Status:</strong>
                                 <?php if ($row->status == "Pending"): ?>
                                     <span class="badge bg-warning text-dark">Pending</span>
@@ -86,15 +111,15 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
                                 <?php else: ?>
                                     <span class="badge bg-danger"><?= $row->status ?></span>
                                 <?php endif; ?>
-                            </p>
-                        </div>
-                        <div class="card-footer bg-transparent text-end">
+                            </div>
+
                             <?php if ($row->status == 'Pending'): ?>
                                 <a href="#" class="btn btn-sm btn-danger cancel-booking-btn" data-booking-id="<?= $row->booking_id ?>">
                                     <i class="fas fa-times-circle"></i> Cancel Booking
                                 </a>
                             <?php endif; ?>
                         </div>
+
                     </div>
                 </div>
             <?php }
@@ -149,6 +174,27 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
+
+    $('.toggle-remarks').on('click', function (e) {
+        e.preventDefault();
+        const span = $(this).closest('.remarks-text');
+        const full = span.data('full');
+        const isExpanded = span.hasClass('expanded');
+
+        if (!isExpanded) {
+            span.html(full + ' <a href="#" class="text-primary toggle-remarks" style="font-size: 0.875rem;">Show less</a>');
+            span.addClass('expanded');
+        } else {
+            const short = full.substring(0, 20) + '...';
+            span.html(short + ' <a href="#" class="text-primary toggle-remarks" style="font-size: 0.875rem;">Read more</a>');
+            span.removeClass('expanded');
+        }
+
+        // Rebind event to new link (because .html() removed old binding)
+        $('.toggle-remarks').off('click').on('click', arguments.callee);
+    });
+
+
     $(document).ready(function () {
         $('.vehicle-img').on('click', function () {
             $('#modalImage').attr('src', $(this).data('full'));

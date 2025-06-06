@@ -16,6 +16,8 @@ if (isset($_POST['book_vehicle'])) {
     $book_from_date = $_POST['book_from_date'];
     $book_to_date = $_POST['book_to_date'];
     $status = 'Pending'; // Default status
+    $remarks = isset($_POST['remarks']) && trim($_POST['remarks']) !== '' ? trim($_POST['remarks']) : 'NA';
+
 
     // STEP 1: Check for existing booking conflicts in the tms_booking table (for Pending or Approved status)
     $statusStmt = $mysqli->prepare("SELECT * FROM tms_booking WHERE vehicle_id = ? AND ((? BETWEEN book_from_date AND book_to_date) OR (? BETWEEN book_from_date AND book_to_date)) AND status = 'Approved'");
@@ -30,9 +32,9 @@ if (isset($_POST['book_vehicle'])) {
         $alert_text = "This vehicle is already booked for the selected date range. Please choose a different range.";
     } else {
         // STEP 2: Insert the new booking into the tms_booking table
-        $query = "INSERT INTO tms_booking (user_id, vehicle_id, book_from_date, book_to_date, status) VALUES (?, ?, ?, ?, ?)";
+        $query = "INSERT INTO tms_booking (user_id, vehicle_id, book_from_date, book_to_date, status, remarks) VALUES (?, ?, ?, ?, ?, ?)";
         $stmt = $mysqli->prepare($query);
-        $stmt->bind_param('iisss', $u_id, $vehicle_id, $book_from_date, $book_to_date, $status);
+        $stmt->bind_param('iissss', $u_id, $vehicle_id, $book_from_date, $book_to_date, $status, $remarks);
 
         if ($stmt->execute()) {
             $alert_type = 'success';

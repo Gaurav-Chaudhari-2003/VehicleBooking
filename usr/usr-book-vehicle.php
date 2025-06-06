@@ -220,6 +220,12 @@ if ($aid) {
                                         <input type="hidden" name="u_car_book_status" value="Pending">
                                     </div>
 
+                                    <!-- Remarks Input -->
+                                    <div class="mb-3">
+                                        <label for="remarks<?= $row->v_id; ?>" class="form-label">Remarks (Optional)</label>
+                                        <textarea id="remarks<?= $row->v_id; ?>" name="remarks" class="form-control" rows="2" placeholder="Any special instructions or notes..."></textarea>
+                                    </div>
+
                                     <!-- Modal Actions -->
                                     <div class="modal-footer">
                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>

@@ -280,3 +280,6 @@ CREATE TABLE tms_pending_user (
     request_time DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE tms_booking ADD COLUMN remarks TEXT;
+
+ALTER TABLE tms_booking ADD COLUMN admin_remarks TEXT;

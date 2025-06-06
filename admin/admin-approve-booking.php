@@ -8,20 +8,32 @@ $aid = $_SESSION['a_id'];
 
 if (isset($_POST['approve_booking'])) {
     $booking_id = $_GET['booking_id'];
-    $booking_status = $_POST['booking_status'];
+    $booking_status = $_POST['approve_booking']; // takes value from clicked button
+    $admin_remarks = $_POST['admin_remarks'];
 
-    // Step 1: Update booking status
-    $query = "UPDATE tms_booking SET status = ? WHERE booking_id = ?";
+    $query = "UPDATE tms_booking SET status = ?, admin_remarks = ? WHERE booking_id = ?";
     $stmt = $mysqli->prepare($query);
-    $stmt->bind_param('si', $booking_status, $booking_id);
+    $stmt->bind_param('ssi', $booking_status, $admin_remarks, $booking_id);
     $stmt->execute();
 
     if ($stmt) {
-        $succ = "Booking status updated successfully.";
+        // Optional: Set a flash message in session if needed
+        $_SESSION['flash_success'] = "Booking has been " . strtolower($booking_status) . " successfully.";
+
+        // Redirect to dashboard after short delay
+        echo "<script>
+        setTimeout(function() {
+            window.location.href = 'admin-dashboard.php';
+        }, 1500);
+    </script>";
+        exit(); // Kill the current page execution
     } else {
-        $err = "Failed to update booking status.";
+        $err = "Failed to update booking.";
     }
+
 }
+
+
 ?>
 
 <!DOCTYPE html>
@@ -120,22 +132,35 @@ if (isset($_POST['approve_booking'])) {
                                 </div>
                             </div>
 
+                            <div class="form-group">
+                                <label>Message from Booking Person</label>
+                                <textarea readonly class="form-control" rows="3"><?php echo htmlspecialchars($row->remarks); ?></textarea>
+                            </div>
+
+
+
                             <!-- Current Status & Status Change -->
                             <div class="form-group">
                                 <label>Current Status</label>
                                 <input type="text" readonly class="form-control" value="<?php echo $row->status; ?>">
                             </div>
+
                             <div class="form-group">
-                                <label>Change Booking Status</label>
-                                <select name="booking_status" class="form-control">
-                                    <option value="Approved" <?php if ($row->status == 'Approved') echo 'selected'; ?>>Approved</option>
-                                    <option value="Pending" <?php if ($row->status == 'Pending') echo 'selected'; ?>>Pending</option>
-                                    <option value="Cancelled" <?php if ($row->status == 'Cancelled') echo 'selected'; ?>>Cancelled</option>
-                                </select>
+                                <label>Admin Remarks</label>
+                                <textarea name="admin_remarks" class="form-control" rows="3" placeholder="Write your remarks here..."><?php echo htmlspecialchars($row->admin_remarks ?? ''); ?></textarea>
                             </div>
 
-                            <!-- Submit Button -->
-                            <button type="submit" name="approve_booking" class="btn btn-success btn-block">Update Booking</button>
+
+
+                            <div class="form-group text-center">
+                                <button type="submit" name="approve_booking" value="Approved" class="btn btn-success">
+                                    <i class="fas fa-check-circle"></i> Approve
+                                </button>
+                                <button type="submit" name="approve_booking" value="Cancelled" class="btn btn-danger ms-2">
+                                    <i class="fas fa-times-circle"></i> Reject
+                                </button>
+                            </div>
+
                         </form>
                     <?php } ?>
                 </div>
