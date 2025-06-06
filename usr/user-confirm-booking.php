@@ -18,7 +18,7 @@ if (isset($_POST['book_vehicle'])) {
     $status = 'Pending'; // Default status
 
     // STEP 1: Check for existing booking conflicts in the tms_booking table (for Pending or Approved status)
-    $statusStmt = $mysqli->prepare("SELECT * FROM tms_booking WHERE vehicle_id = ? AND ((? BETWEEN book_from_date AND book_to_date) OR (? BETWEEN book_from_date AND book_to_date)) AND status IN ('Pending', 'Approved')");
+    $statusStmt = $mysqli->prepare("SELECT * FROM tms_booking WHERE vehicle_id = ? AND ((? BETWEEN book_from_date AND book_to_date) OR (? BETWEEN book_from_date AND book_to_date)) AND status = 'Approved'");
     $statusStmt->bind_param('iss', $vehicle_id, $book_from_date, $book_to_date);
     $statusStmt->execute();
     $statusResult = $statusStmt->get_result();
