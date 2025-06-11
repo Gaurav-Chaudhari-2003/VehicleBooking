@@ -16,9 +16,8 @@ if (isset($_POST['Usr-login'])) {
     $result = $stmt->get_result();
 
     if ($user = $result->fetch_assoc()) {
-        // If you use hashed passwords in your DB, use password_verify instead of ===
-        // Example: if (password_verify($u_pwd, $user['u_pwd']))
-        if ($u_pwd === $user['u_pwd']) {
+        // Verify the password hash
+        if (password_verify($u_pwd, $user['u_pwd'])) {
             $_SESSION['u_id'] = $user['u_id'];
 
             // Log user login with IP
@@ -39,6 +38,7 @@ if (isset($_POST['Usr-login'])) {
         $error = "Invalid email or password.";
     }
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -85,7 +85,7 @@ if (isset($_POST['Usr-login'])) {
 
             <div class="text-center mt-3">
                 <a class="d-block small" href="usr-register.php">Register an Account</a>
-                <a class="d-block small" href="usr-forgot-password.php">Forgot Password?</a>
+                <a class="d-block small" href="../password-reset.php">Forgot Password?</a>
                 <a class="d-block small" href="../index.php">Home</a>
             </div>
         </div>
