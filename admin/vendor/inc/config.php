@@ -1,7 +1,7 @@
 <?php
 $dbuser="root";
-$dbpass="8520";
+$dbpass="admin";
 $host="localhost";
 $db="vehiclebookings";
 $mysqli=new mysqli($host,$dbuser, $dbpass, $db);
-?>
+

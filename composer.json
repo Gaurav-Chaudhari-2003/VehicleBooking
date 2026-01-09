@@ -1,5 +1,6 @@
 {
     "require": {
-        "getbrevo/brevo-php": "^2.0"
+        "getbrevo/brevo-php": "^2.0",
+      "ext-mysqli": "*"
     }
 }
