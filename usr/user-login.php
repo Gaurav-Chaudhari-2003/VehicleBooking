@@ -17,7 +17,8 @@ if (isset($_POST['Usr-login'])) {
 
     if ($user = $result->fetch_assoc()) {
         // Verify the password hash
-        if (password_verify($u_pwd, $user['u_pwd'])) {
+        // Check if the password is hashed or plain text (for legacy support)
+        if (password_verify($u_pwd, $user['u_pwd']) || $u_pwd === $user['u_pwd']) {
             $_SESSION['u_id'] = $user['u_id'];
 
             // Log user login with IP
