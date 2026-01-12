@@ -11,12 +11,43 @@ if (isset($_POST['approve_booking'])) {
     $booking_status = $_POST['approve_booking']; // takes value from clicked button
     $admin_remarks = $_POST['admin_remarks'];
 
+    // 1. Update the status of the current booking
     $query = "UPDATE tms_booking SET status = ?, admin_remarks = ? WHERE booking_id = ?";
     $stmt = $mysqli->prepare($query);
     $stmt->bind_param('ssi', $booking_status, $admin_remarks, $booking_id);
     $stmt->execute();
 
     if ($stmt) {
+        // 2. If the booking is APPROVED, automatically reject conflicting PENDING bookings
+        if ($booking_status === 'Approved') {
+            // Fetch details of the approved booking to get vehicle_id and dates
+            $detailsQuery = "SELECT vehicle_id, book_from_date, book_to_date FROM tms_booking WHERE booking_id = ?";
+            $detailsStmt = $mysqli->prepare($detailsQuery);
+            $detailsStmt->bind_param('i', $booking_id);
+            $detailsStmt->execute();
+            $detailsResult = $detailsStmt->get_result();
+            
+            if ($row = $detailsResult->fetch_assoc()) {
+                $vehicle_id = $row['vehicle_id'];
+                $approved_start = $row['book_from_date'];
+                $approved_end = $row['book_to_date'];
+
+                // Reject conflicting Pending bookings
+                // Conflict logic: (StartA <= EndB) and (EndA >= StartB)
+                $rejectQuery = "UPDATE tms_booking 
+                                SET status = 'Rejected', 
+                                    admin_remarks = 'System Auto-Rejected: Conflict with an approved booking.' 
+                                WHERE vehicle_id = ? 
+                                  AND status = 'Pending' 
+                                  AND booking_id != ? 
+                                  AND (book_from_date <= ? AND book_to_date >= ?)";
+                
+                $rejectStmt = $mysqli->prepare($rejectQuery);
+                $rejectStmt->bind_param('iiss', $vehicle_id, $booking_id, $approved_end, $approved_start);
+                $rejectStmt->execute();
+            }
+        }
+
         // Optional: Set a flash message in session if needed
         $_SESSION['flash_success'] = "Booking has been " . strtolower($booking_status) . " successfully.";
 
