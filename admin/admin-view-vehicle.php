@@ -9,16 +9,16 @@ $aid = $_SESSION['a_id'];
 if (isset($_GET['del'])) {
     $id = intval($_GET['del']);
     $adn = "DELETE FROM tms_vehicle WHERE v_id=?";
+    global $mysqli;
     $stmt = $mysqli->prepare($adn);
     $stmt->bind_param('i', $id);
-    $stmt->execute();
-    $stmt->close();
-
-    if ($stmt) {
+    
+    if ($stmt->execute()) {
         $succ = "Vehicle Removed";
     } else {
         $err = "Try Again Later";
     }
+    $stmt->close();
 }
 ?>
 
@@ -109,7 +109,7 @@ if (isset($_GET['del'])) {
                                     </td>
                                     <td>
                                         <a href="admin-manage-single-vehicle.php?v_id=<?php echo $row->v_id; ?>" class="badge badge-success">Update</a>
-                                        <a href="admin-manage-vehicle.php?del=<?php echo $row->v_id; ?>" class="badge badge-danger">Delete</a>
+                                        <a href="admin-view-vehicle.php?del=<?php echo $row->v_id; ?>" class="badge badge-danger" onclick="return confirm('Are you sure you want to delete this vehicle?');">Delete</a>
                                     </td>
                                 </tr>
                                 <?php
@@ -142,7 +142,10 @@ if (isset($_GET['del'])) {
 <script src="vendor/datatables/dataTables.bootstrap4.js"></script>
 
 <!-- Custom scripts for all pages-->
-<script src="js/sb-admin.min.js"></script>
+<script src="vendor/js/sb-admin.min.js"></script>
+
+<!-- SweetAlert -->
+<script src="vendor/js/swal.js"></script>
 
 <!-- Initialize DataTable with Search -->
 <script>
@@ -157,7 +160,7 @@ if (isset($_GET['del'])) {
 </script>
 
 <!-- Demo scripts for this page-->
-<script src="js/demo/datatables-demo.js"></script>
+<script src="vendor/js/demo/datatables-demo.js"></script>
 
 </body>
 
