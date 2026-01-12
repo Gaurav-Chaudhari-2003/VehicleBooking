@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_veh'])) {
     $v_reg_no   = $_POST['v_reg_no'];
     $v_category = $_POST['v_category'];
     $v_pass_no  = $_POST['v_pass_no'];
-    $v_status   = $_POST['v_status'];
+    $v_status   = "Available"; // Set status to Available by default
     $v_driver   = $_POST['v_driver'];
 
     // Image Upload Logic
@@ -128,13 +128,9 @@ if (isset($_SESSION['err'])) {
                             </select>
                         </div>
 
-                        <div class="form-group">
+                        <div class="form-group" style="display:none">
                             <label for="v_status">Vehicle Status</label>
-                            <select class="form-control" name="v_status" id="v_status">
-                                <option>Available</option>
-                                <option>Booked</option>
-                                <option>Maintenance</option>
-                            </select>
+                            <input type="text" class="form-control" id="v_status" name="v_status" value="Available" readonly>
                         </div>
 
                         <div class="form-group">
@@ -157,7 +153,6 @@ if (isset($_SESSION['err'])) {
 <script src="vendor/jquery/jquery.min.js"></script>
 <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="vendor/jquery-easing/jquery.easing.min.js"></script>
-<script src="vendor/chart.js/Chart.min.js"></script>
 <script src="vendor/datatables/jquery.dataTables.js"></script>
 <script src="vendor/datatables/dataTables.bootstrap4.js"></script>
 <script src="vendor/js/sb-admin.min.js"></script>
