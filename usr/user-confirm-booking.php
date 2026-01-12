@@ -19,19 +19,22 @@ if (isset($_POST['book_vehicle'])) {
     $remarks = isset($_POST['remarks']) && trim($_POST['remarks']) !== '' ? trim($_POST['remarks']) : 'NA';
 
 
-    // STEP 1: Check for existing booking conflicts in the tms_booking table (for Pending or Approved status)
-    $statusStmt = $mysqli->prepare("SELECT * FROM tms_booking WHERE vehicle_id = ? AND ((? BETWEEN book_from_date AND book_to_date) OR (? BETWEEN book_from_date AND book_to_date)) AND status IN ('Pending', 'Approved')");
-    $statusStmt->bind_param('iss', $vehicle_id, $book_from_date, $book_to_date);
+    // STEP 1: Check for existing booking conflicts in the tms_booking table (ONLY for Approved status)
+    // We allow multiple Pending requests for the same dates, but block if it's already Approved.
+    // Check for overlap: (ExistingStart <= NewEnd) AND (ExistingEnd >= NewStart)
+    $statusStmt = $mysqli->prepare("SELECT * FROM tms_booking WHERE vehicle_id = ? AND status = 'Approved' AND book_from_date <= ? AND book_to_date >= ?");
+    $statusStmt->bind_param('iss', $vehicle_id, $book_to_date, $book_from_date);
     $statusStmt->execute();
     $statusResult = $statusStmt->get_result();
 
     if ($statusResult->num_rows > 0) {
-        // There is a conflict with the selected booking dates
+        // There is a conflict with an APPROVED booking
         $alert_type = 'warning';
         $alert_title = 'Warning';
-        $alert_text = "This vehicle is already booked for the selected date range. Please choose a different range.";
+        $alert_text = "This vehicle is already booked (Approved) for the selected date range. Please choose a different range.";
     } else {
         // STEP 2: Insert the new booking into the tms_booking table
+        // This will allow overlapping Pending requests
         $query = "INSERT INTO tms_booking (user_id, vehicle_id, book_from_date, book_to_date, status, remarks) VALUES (?, ?, ?, ?, ?, ?)";
         $stmt = $mysqli->prepare($query);
         $stmt->bind_param('iissss', $u_id, $vehicle_id, $book_from_date, $book_to_date, $status, $remarks);
@@ -39,7 +42,7 @@ if (isset($_POST['book_vehicle'])) {
         if ($stmt->execute()) {
             $alert_type = 'success';
             $alert_title = 'Success';
-            $alert_text = 'Your vehicle booking has been successfully submitted!';
+            $alert_text = 'Your vehicle booking request has been successfully submitted! Please wait for admin approval.';
         } else {
             $alert_type = 'error';
             $alert_title = 'Error';

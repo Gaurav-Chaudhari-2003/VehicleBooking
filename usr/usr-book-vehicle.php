@@ -64,6 +64,25 @@ if ($aid) {
         body {
             background-color: #f4f6f9;
         }
+
+
+        /* Custom styles for Flatpickr */
+        .flatpickr-day.pending {
+            background-color: #ffc107 !important;
+            color: black !important;
+            border-color: #ffc107 !important;
+        }
+        .flatpickr-day.booked {
+            background-color: #ff4d4d !important;
+            color: white !important;
+            border-color: #ff4d4d !important;
+        }
+        .flatpickr-day.overlap-restricted {
+            background-color: #e0e0e0 !important;
+            color: #aaaaaa !important;
+            border-color: #e0e0e0 !important;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -210,17 +229,25 @@ if ($aid) {
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
+<!-- Flatpickr JS -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
 <script>
     async function fetchBookedDates(vehicleId) {
-        const res = await fetch(`get-booked-dates.php?v_id=${vehicleId}`);
+        const res = await fetch(`get-approved-dates.php?v_id=${vehicleId}`);
         return res.json();
     }
 
-    function buildFlatpickrOptions(bookedRanges, minDate, linkedTo = null) {
+    async function fetchPendingDates(vehicleId) {
+        const res = await fetch(`get-pending-dates.php?v_id=${vehicleId}`);
+        return res.json();
+    }
+
+    function buildFlatpickrOptions(approvedRanges, pendingRanges, minDate) {
         const disabled = [];
 
-        // Convert ranges to flatpickr format
-        bookedRanges.forEach(range => {
+        // Disable approved dates
+        approvedRanges.forEach(range => {
             disabled.push({
                 from: range.book_from_date,
                 to: range.book_to_date
@@ -231,6 +258,28 @@ if ($aid) {
             minDate: minDate,
             dateFormat: "Y-m-d",
             disable: disabled,
+            onDayCreate: function(dObj, dStr, fp, dayElem) {
+                const date = dayElem.dateObj;
+                const dateString = flatpickr.formatDate(date, "Y-m-d");
+
+                // Check if date is in approved ranges
+                for (const range of approvedRanges) {
+                    if (dateString >= range.book_from_date && dateString <= range.book_to_date) {
+                        dayElem.classList.add("booked");
+                        dayElem.title = "Car already booked and approved to another person for this dates"; // Add tooltip
+                        break;
+                    }
+                }
+
+                // Check if date is in pending ranges
+                for (const range of pendingRanges) {
+                    if (dateString >= range.book_from_date && dateString <= range.book_to_date) {
+                        dayElem.classList.add("pending");
+                        dayElem.title = "Car already choose by another person for this dates, but not approved."; // Add tooltip
+                        break;
+                    }
+                }
+            }
         };
 
         return options;
@@ -247,17 +296,53 @@ if ($aid) {
         // Initially disable 'To Date' input
         toInput.disabled = true;
 
-        fetchBookedDates(vehicleId).then(bookedRanges => {
-            const fromPicker = flatpickr(fromInput, buildFlatpickrOptions(bookedRanges, today));
+        Promise.all([fetchBookedDates(vehicleId), fetchPendingDates(vehicleId)]).then(([approvedRanges, pendingRanges]) => {
+            // Sort approvedRanges by date
+            approvedRanges.sort((a, b) => new Date(a.book_from_date) - new Date(b.book_from_date));
+
+            const fromPicker = flatpickr(fromInput, buildFlatpickrOptions(approvedRanges, pendingRanges, today));
 
             // Ensure when 'From Date' changes, 'To Date' is enabled
             fromPicker.config.onChange.push(function(selectedDates, dateStr) {
                 if (selectedDates.length > 0) {
+                    const fromDate = selectedDates[0];
+                    
                     // Enable the 'To Date' input
                     toInput.disabled = false;
 
-                    // Set 'To Date' min date as 'From Date'
-                    flatpickr(toInput, buildFlatpickrOptions(bookedRanges, dateStr));
+                    // Find the next approved booking start date
+                    let nextBookingStart = null;
+                    for (const range of approvedRanges) {
+                        const rangeStart = new Date(range.book_from_date);
+                        if (rangeStart > fromDate) {
+                            nextBookingStart = rangeStart;
+                            break;
+                        }
+                    }
+
+                    // Build options for To Date
+                    const toOptions = buildFlatpickrOptions(approvedRanges, pendingRanges, dateStr);
+                    
+                    if (nextBookingStart) {
+                        // Calculate maxDate = nextBookingStart - 1 day
+                        const maxDate = new Date(nextBookingStart);
+                        maxDate.setDate(maxDate.getDate() - 1);
+                        toOptions.maxDate = maxDate;
+                    }
+
+                    // Custom onDayCreate for overlap restriction
+                    const baseOnDayCreate = toOptions.onDayCreate;
+                    toOptions.onDayCreate = function(dObj, dStr, fp, dayElem) {
+                        baseOnDayCreate(dObj, dStr, fp, dayElem);
+                        
+                        if (toOptions.maxDate && dObj > toOptions.maxDate) {
+                            dayElem.classList.add("overlap-restricted");
+                            dayElem.title = "Cannot book past this date due to an upcoming approved booking overlap.";
+                        }
+                    };
+
+                    // Initialize To Date picker
+                    flatpickr(toInput, toOptions);
                 }
             });
         });
@@ -269,9 +354,6 @@ if ($aid) {
         });
     });
 </script>
-
-
-
 
 <script>
     $(function () {
@@ -297,10 +379,6 @@ if ($aid) {
         $('#searchInput, #seatFilter, #driverFilter').on('input change', filterVehicles);
     });
 </script>
-
-<!-- Flatpickr JS -->
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-
 
 </body>
 </html>

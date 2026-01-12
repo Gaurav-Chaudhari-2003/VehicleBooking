@@ -7,7 +7,7 @@ if (isset($_GET['v_id'])) {
     $stmt = $mysqli->prepare("
         SELECT book_from_date, book_to_date 
         FROM tms_booking 
-        WHERE vehicle_id = ? AND status IN ('Pending', 'Approved')
+        WHERE vehicle_id = ? AND status IN ('Approved')
     ");
     $stmt->bind_param("i", $v_id);
     $stmt->execute();
