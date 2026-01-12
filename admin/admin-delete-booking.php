@@ -6,7 +6,7 @@ include('vendor/inc/checklogin.php');
 check_login();
 $aid = $_SESSION['a_id'];
 
-// Handle Actions
+// Handle Actions via AJAX
 if (isset($_GET['action']) && isset($_GET['booking_id'])) {
     $action = $_GET['action'];
     $booking_id = intval($_GET['booking_id']);
@@ -24,11 +24,19 @@ if (isset($_GET['action']) && isset($_GET['booking_id'])) {
 
     $stmt = $mysqli->prepare($query);
     $stmt->bind_param('i', $booking_id);
-    $stmt->execute();
-
-    if ($stmt) {
+    
+    if ($stmt->execute()) {
+        // If it's an AJAX request, return JSON
+        if (isset($_GET['ajax']) && $_GET['ajax'] == 'true') {
+            echo json_encode(['status' => 'success', 'message' => 'Operation Successful!']);
+            exit;
+        }
         $succ = "Operation Successful!";
     } else {
+        if (isset($_GET['ajax']) && $_GET['ajax'] == 'true') {
+            echo json_encode(['status' => 'error', 'message' => 'Operation Failed. Please Try Again.']);
+            exit;
+        }
         $err = "Operation Failed. Please Try Again.";
     }
 }
@@ -105,14 +113,14 @@ if (isset($_GET['action']) && isset($_GET['booking_id'])) {
                                 </div>
                                 <div class="form-group">
                                     <label>Booking Date</label>
-                                    <input type="text" readonly value="<?php echo $row->created_at; ?>" class="form-control">
+                                    <input type="text" readonly value="<?php echo date('d M y h:i A', strtotime($row->created_at)); ?>" class="form-control">
                                 </div>
                                 <div class="form-group">
                                     <label>Booking Status</label>
-                                    <input type="text" readonly value="<?php echo $row->status; ?>" class="form-control">
+                                    <input type="text" readonly value="<?php echo $row->status; ?>" class="form-control" id="bookingStatus">
                                 </div>
 
-                                <div class="form-group text-center">
+                                <div class="form-group text-center" id="actionButtons">
                                     <?php if ($row->status == 'Pending') { ?>
                                         <button type="button" class="btn btn-success btn-lg" onclick="confirmAction('approve', <?php echo $booking_id; ?>)">Approve</button>
                                         <button type="button" class="btn btn-danger btn-lg" onclick="confirmAction('reject', <?php echo $booking_id; ?>)">Reject</button>
@@ -155,25 +163,13 @@ if (isset($_GET['action']) && isset($_GET['booking_id'])) {
 <script>
     function confirmAction(action, booking_id) {
         let actionText = '';
-        let actionUrl = '';
+        let actionUrl = "admin-delete-booking.php?ajax=true&action=" + action + "&booking_id=" + booking_id;
 
         switch(action) {
-            case 'approve':
-                actionText = "approve this booking";
-                actionUrl = "admin-delete-booking.php?action=approve&booking_id=" + booking_id;
-                break;
-            case 'reject':
-                actionText = "reject this booking";
-                actionUrl = "admin-delete-booking.php?action=reject&booking_id=" + booking_id;
-                break;
-            case 'complete':
-                actionText = "mark this booking as completed";
-                actionUrl = "admin-delete-booking.php?action=complete&booking_id=" + booking_id;
-                break;
-            case 'delete':
-                actionText = "delete this booking permanently";
-                actionUrl = "admin-delete-booking.php?action=delete&booking_id=" + booking_id;
-                break;
+            case 'approve': actionText = "approve this booking"; break;
+            case 'reject': actionText = "reject this booking"; break;
+            case 'complete': actionText = "mark this booking as completed"; break;
+            case 'delete': actionText = "delete this booking permanently"; break;
         }
 
         swal({
@@ -184,7 +180,45 @@ if (isset($_GET['action']) && isset($_GET['booking_id'])) {
             dangerMode: true,
         }).then((willAct) => {
             if (willAct) {
-                window.location.href = actionUrl;
+                // Perform AJAX request
+                $.ajax({
+                    url: actionUrl,
+                    type: 'GET',
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            swal("Success!", response.message, "success");
+                            
+                            // Update UI dynamically based on action
+                            if (action === 'delete') {
+                                // If deleted, redirect to dashboard as the record is gone
+                                setTimeout(() => { window.location.href = "admin-dashboard.php"; }, 1500);
+                            } else {
+                                // Update status field
+                                let newStatus = '';
+                                if (action === 'approve') newStatus = 'Approved';
+                                else if (action === 'reject') newStatus = 'Rejected';
+                                else if (action === 'complete') newStatus = 'Completed';
+                                
+                                $('#bookingStatus').val(newStatus);
+                                
+                                // Update buttons dynamically
+                                let buttonsHtml = '';
+                                if (newStatus === 'Approved') {
+                                    buttonsHtml = `<button type="button" class="btn btn-primary btn-lg" onclick="confirmAction('complete', ${booking_id})">Mark as Completed</button>`;
+                                } else if (['Rejected', 'Completed'].includes(newStatus)) {
+                                    buttonsHtml = `<button type="button" class="btn btn-danger btn-lg" onclick="confirmAction('delete', ${booking_id})">Delete Entry</button>`;
+                                }
+                                $('#actionButtons').html(buttonsHtml);
+                            }
+                        } else {
+                            swal("Error!", response.message, "error");
+                        }
+                    },
+                    error: function() {
+                        swal("Error!", "Something went wrong with the request.", "error");
+                    }
+                });
             }
         });
     }

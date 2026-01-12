@@ -155,11 +155,11 @@ if (isset($_POST['approve_booking'])) {
                             <div class="form-row">
                                 <div class="form-group col-md-6">
                                     <label>Booking From Date</label>
-                                    <input type="text" readonly class="form-control" value="<?php echo $row->book_from_date; ?>">
+                                    <input type="text" readonly class="form-control" value="<?php echo date('d M y', strtotime($row->book_from_date)); ?>">
                                 </div>
                                 <div class="form-group col-md-6">
                                     <label>Booking To Date</label>
-                                    <input type="text" readonly class="form-control" value="<?php echo $row->book_to_date; ?>">
+                                    <input type="text" readonly class="form-control" value="<?php echo date('d M y', strtotime($row->book_to_date)); ?>">
                                 </div>
                             </div>
 

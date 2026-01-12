@@ -226,9 +226,9 @@ date_default_timezone_set("Asia/Kolkata");
     <div class="row g-4">
         <?php
         $cards = [
-            ['count' => $user_count, 'title' => 'Users', 'icon' => 'fas fa-users', 'color' => 'primary', 'link' => 'admin-view-user.php'],
-            ['count' => $driver_count, 'title' => 'Drivers', 'icon' => 'fas fa-id-card', 'color' => 'success', 'link' => 'admin-view-driver.php'],
-            ['count' => $vehicle_count, 'title' => 'Vehicles', 'icon' => 'fas fa-bus', 'color' => 'warning', 'link' => 'admin-view-vehicle.php'],
+            ['id' => 'user-count', 'count' => $user_count, 'title' => 'Users', 'icon' => 'fas fa-users', 'color' => 'primary', 'link' => 'admin-view-user.php'],
+            ['id' => 'driver-count', 'count' => $driver_count, 'title' => 'Drivers', 'icon' => 'fas fa-id-card', 'color' => 'success', 'link' => 'admin-view-driver.php'],
+            ['id' => 'vehicle-count', 'count' => $vehicle_count, 'title' => 'Vehicles', 'icon' => 'fas fa-bus', 'color' => 'warning', 'link' => 'admin-view-vehicle.php'],
         ];
         foreach ($cards as $card):
             ?>
@@ -236,7 +236,7 @@ date_default_timezone_set("Asia/Kolkata");
                 <div class="card text-center hover-translate shadow-sm">
                     <div class="card-body">
                         <i class="<?= $card['icon']; ?> fa-3x text-<?= $card['color']; ?> mb-3"></i>
-                        <h5 class="card-title"><?= $card['count'] . " " . $card['title']; ?></h5>
+                        <h5 class="card-title" id="<?= $card['id']; ?>"><?= $card['count'] . " " . $card['title']; ?></h5>
                         <a href="<?= $card['link']; ?>" class="btn btn-outline-<?= $card['color']; ?> btn-sm mt-2">View Details</a>
                     </div>
                 </div>
@@ -268,64 +268,12 @@ date_default_timezone_set("Asia/Kolkata");
                     </tr>
                     </thead>
                     <tbody>
-                    <?php
-                    if ($stmt = $mysqli->prepare("
-                        SELECT b.booking_id, b.book_from_date, b.book_to_date, b.status, b.created_at,
-                               v.v_name, v.v_reg_no, u.u_fname, u.u_lname, u.u_phone
-                        FROM tms_booking b
-                        JOIN tms_vehicle v ON b.vehicle_id = v.v_id
-                        JOIN tms_user u ON b.user_id = u.u_id
-                        ORDER BY b.book_from_date DESC
-                    ")) {
-                        $stmt->execute();
-                        $res = $stmt->get_result();
-                        $cnt = 1;
-                        while ($row = $res->fetch_object()):
-                            ?>
-                            <tr>
-                                <td><?= htmlspecialchars("$row->booking_id"); ?></td>
-                                <td><?= htmlspecialchars("$row->u_fname $row->u_lname"); ?></td>
-                                <td><?= htmlspecialchars($row->u_phone); ?></td>
-                                <td><?= htmlspecialchars($row->v_name); ?></td>
-                                <td><?= htmlspecialchars($row->v_reg_no); ?></td>
-                                <td><?= htmlspecialchars($row->created_at); ?></td>
-                                <td><?= date("d M Y", strtotime($row->book_from_date)) . " → " . date("d M Y", strtotime($row->book_to_date)); ?></td>
-                                <?php
-                                $statusClass = [
-                                    'Pending' => 'warning text-dark',
-                                    'Approved' => 'success',
-                                    'Completed' => 'secondary',
-                                    'Rejected' => 'danger',
-                                    'Cancelled' => 'danger'
-                                ];
-                                ?>
-                                <td>
-                                    <span class="badge bg-<?= $statusClass[$row->status] ?? 'secondary'; ?>">
-                                        <?= htmlspecialchars($row->status); ?>
-                                    </span>
-                                </td>
-
-                                <td>
-                                    <?php if ($row->status == "Pending"): ?>
-                                        <a href="admin-approve-booking.php?booking_id=<?= $row->booking_id; ?>" class="btn btn-success btn-sm">
-                                            <i class="fa fa-check"></i>
-                                        </a>
-                                    <?php endif; ?>
-                                    <a href="admin-delete-booking.php?booking_id=<?= $row->booking_id; ?>" class="btn btn-danger btn-sm">
-                                        <i class="fa fa-trash"></i>
-                                    </a>
-                                </td>
-                            </tr>
-                        <?php
-                        endwhile;
-                        $stmt->close();
-                    }
-                    ?>
+                    <!-- Data will be populated by JS -->
                     </tbody>
                 </table>
             </div>
         </div>
-        <div class="card-footer text-muted small text-end">
+        <div class="card-footer text-muted small text-end" id="last-updated">
             Last updated at <?= date("h:i A"); ?>
         </div>
     </div>
@@ -338,7 +286,70 @@ date_default_timezone_set("Asia/Kolkata");
 <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
 <script>
     $(document).ready(function () {
-        $('#dataTable').DataTable();
+        const table = $('#dataTable').DataTable();
+
+        function fetchData() {
+            $.ajax({
+                url: 'fetch-dashboard-data.php',
+                method: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    // Update counts
+                    $('#user-count').text(data.user_count + ' Users');
+                    $('#driver-count').text(data.driver_count + ' Drivers');
+                    $('#vehicle-count').text(data.vehicle_count + ' Vehicles');
+                    $('#last-updated').text('Last updated at ' + data.last_updated);
+
+                    // Update table
+                    table.clear();
+                    data.bookings.forEach(function (row) {
+                        const statusClass = {
+                            'Pending': 'warning text-dark',
+                            'Approved': 'success',
+                            'Completed': 'secondary',
+                            'Rejected': 'danger',
+                            'Cancelled': 'danger'
+                        };
+                        const badgeClass = statusClass[row.status] || 'secondary';
+                        
+                        let actions = '';
+                        if (row.status === 'Pending') {
+                            actions += `<a href="admin-approve-booking.php?booking_id=${row.booking_id}" class="btn btn-success btn-sm"><i class="fa fa-check"></i></a> `;
+                        }
+                        actions += `<a href="admin-delete-booking.php?booking_id=${row.booking_id}" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i></a>`;
+
+                        const fromDate = new Date(row.book_from_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                        const toDate = new Date(row.book_to_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                        
+                        const bookedOn = new Date(row.created_at).toLocaleString('en-GB', { 
+                            day: '2-digit', 
+                            month: 'short', 
+                            year: '2-digit', 
+                            hour: '2-digit', 
+                            minute: '2-digit', 
+                            hour12: true 
+                        }).replace(',', '');
+
+                        table.row.add([
+                            row.booking_id,
+                            `${row.u_fname} ${row.u_lname}`,
+                            row.u_phone,
+                            row.v_name,
+                            row.v_reg_no,
+                            bookedOn,
+                            `${fromDate} → ${toDate}`,
+                            `<span class="badge bg-${badgeClass}">${row.status}</span>`,
+                            actions
+                        ]);
+                    });
+                    table.draw(false); // false to keep pagination
+                }
+            });
+        }
+
+        // Fetch data every 5 seconds
+        setInterval(fetchData, 5000);
+        fetchData(); // Initial fetch
     });
 </script>
 </body>
