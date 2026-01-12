@@ -15,9 +15,15 @@ if (isset($_POST['add_user'])) {
     $u_pwd = $_POST['u_pwd'];
     $u_category = "User";
 
-    $query = "INSERT INTO tms_user (u_fname, u_lname, u_phone, u_addr, u_category, u_email, u_pwd) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    // Default values for fields that don't have a default value in DB
+    $u_car_type = '';
+    $u_car_regno = '';
+    $u_car_bookdate = '';
+    $u_car_book_status = '';
+
+    $query = "INSERT INTO tms_user (u_fname, u_lname, u_phone, u_addr, u_category, u_email, u_pwd, u_car_type, u_car_regno, u_car_bookdate, u_car_book_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     $stmt = $mysqli->prepare($query);
-    $stmt->bind_param('sssssss', $u_fname, $u_lname, $u_phone, $u_addr, $u_category, $u_email, $u_pwd);
+    $stmt->bind_param('sssssssssss', $u_fname, $u_lname, $u_phone, $u_addr, $u_category, $u_email, $u_pwd, $u_car_type, $u_car_regno, $u_car_bookdate, $u_car_book_status);
     if ($stmt->execute()) {
         $succ = "User Added Successfully";
     } else {
@@ -48,9 +54,16 @@ if (isset($_GET['approve'])) {
     $result = $stmt->get_result();
     if ($result->num_rows > 0) {
         $user = $result->fetch_assoc();
-        $insert = "INSERT INTO tms_user (u_fname, u_lname, u_phone, u_addr, u_category, u_email, u_pwd) VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+        // Default values for fields that don't have a default value in DB
+        $u_car_type = '';
+        $u_car_regno = '';
+        $u_car_bookdate = '';
+        $u_car_book_status = '';
+
+        $insert = "INSERT INTO tms_user (u_fname, u_lname, u_phone, u_addr, u_category, u_email, u_pwd, u_car_type, u_car_regno, u_car_bookdate, u_car_book_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt2 = $mysqli->prepare($insert);
-        $stmt2->bind_param('sssssss', $user['u_fname'], $user['u_lname'], $user['u_phone'], $user['u_addr'], $user['u_category'], $user['u_email'], $user['u_pwd']);
+        $stmt2->bind_param('sssssssssss', $user['u_fname'], $user['u_lname'], $user['u_phone'], $user['u_addr'], $user['u_category'], $user['u_email'], $user['u_pwd'], $u_car_type, $u_car_regno, $u_car_bookdate, $u_car_book_status);
         if ($stmt2->execute()) {
             $delete = $mysqli->prepare("DELETE FROM tms_pending_user WHERE id = ?");
             $delete->bind_param("i", $id);

@@ -1,3 +1,38 @@
+<?php
+session_start();
+include('vendor/inc/config.php');
+include('vendor/inc/checklogin.php');
+check_login();
+$aid = $_SESSION['a_id'];
+
+// Add Driver
+if (isset($_POST['add_driver'])) {
+    $u_fname = $_POST['u_fname'];
+    $u_lname = $_POST['u_lname'];
+    $u_phone = $_POST['u_phone'];
+    $u_addr = $_POST['u_addr'];
+    $u_email = $_POST['u_email'];
+    $u_pwd = $_POST['u_pwd'];
+    $u_category = $_POST['u_category'];
+
+    // Default values for fields that don't have a default value in DB
+    $u_car_type = '';
+    $u_car_regno = '';
+    $u_car_bookdate = '';
+    $u_car_book_status = '';
+
+    $query = "INSERT INTO tms_user (u_fname, u_lname, u_phone, u_addr, u_category, u_email, u_pwd, u_car_type, u_car_regno, u_car_bookdate, u_car_book_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    $stmt = $mysqli->prepare($query);
+    $stmt->bind_param('sssssssssss', $u_fname, $u_lname, $u_phone, $u_addr, $u_category, $u_email, $u_pwd, $u_car_type, $u_car_regno, $u_car_bookdate, $u_car_book_status);
+    $stmt->execute();
+
+    if ($stmt) {
+        $succ = "Driver Added Successfully";
+    } else {
+        $err = "Something went wrong. Please try again.";
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 

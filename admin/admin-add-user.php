@@ -15,9 +15,15 @@ if (isset($_POST['add_user'])) {
     $u_pwd = $_POST['u_pwd'];
     $u_category = $_POST['u_category'];
 
-    $query = "INSERT INTO tms_user (u_fname, u_lname, u_phone, u_addr, u_category, u_email, u_pwd) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    // Default values for fields that don't have a default value in DB
+    $u_car_type = '';
+    $u_car_regno = '';
+    $u_car_bookdate = '';
+    $u_car_book_status = '';
+
+    $query = "INSERT INTO tms_user (u_fname, u_lname, u_phone, u_addr, u_category, u_email, u_pwd, u_car_type, u_car_regno, u_car_bookdate, u_car_book_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     $stmt = $mysqli->prepare($query);
-    $stmt->bind_param('sssssss', $u_fname, $u_lname, $u_phone, $u_addr, $u_category, $u_email, $u_pwd);
+    $stmt->bind_param('sssssssssss', $u_fname, $u_lname, $u_phone, $u_addr, $u_category, $u_email, $u_pwd, $u_car_type, $u_car_regno, $u_car_bookdate, $u_car_book_status);
     $stmt->execute();
 
     if ($stmt) {
