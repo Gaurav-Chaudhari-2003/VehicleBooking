@@ -137,7 +137,7 @@ if ($aid) {
                          aria-labelledby="bookModalLabel<?php echo $row->v_id; ?>" aria-hidden="true">
                         <div class="modal-dialog modal-dialog-centered">
                             <div class="modal-content border-0 shadow-lg rounded-4">
-                                <form method="POST" action="user-confirm-booking.php">
+                                <form method="POST" action="user-confirm-booking.php" onsubmit="return validateBookingDates(this);">
                                     <div class="modal-header bg-warning text-dark rounded-top-4">
                                         <h5 class="modal-title" id="bookModalLabel<?php echo $row->v_id; ?>">
                                             Confirm Vehicle Booking
@@ -353,6 +353,23 @@ if ($aid) {
             setDateLimits(modal);
         });
     });
+
+    function validateBookingDates(form) {
+        const fromDate = form.querySelector('.book-from-date').value;
+        const toDate = form.querySelector('.book-to-date').value;
+
+        if (!fromDate || !toDate) {
+            swal("Error", "Please select both From and To dates.", "error");
+            return false;
+        }
+
+        if (new Date(fromDate) > new Date(toDate)) {
+            swal("Error", "The 'From Date' cannot be later than the 'To Date'.", "error");
+            return false;
+        }
+
+        return true;
+    }
 </script>
 
 <script>
