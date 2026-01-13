@@ -5,7 +5,7 @@ session_start();
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['logout'])) {
     session_unset();
     session_destroy();
-    header("Location: /VehicleBooking/index.php");
+    header("Location: ../index.php");
     exit;
 }
 
@@ -17,12 +17,13 @@ $aid = $_SESSION['a_id'] ?? null;
 
 // Redirect if not logged in
 if (!$aid) {
-    header("Location: /VehicleBooking/index.php");
+    header("Location: ../index.php");
     exit;
 }
 
 // Fetch admin profile
 $admin = null;
+global $mysqli;
 if ($stmt = $mysqli->prepare("SELECT a_name, a_email FROM tms_admin WHERE a_id = ?")) {
     $stmt->bind_param("i", $aid);
     $stmt->execute();
@@ -37,6 +38,7 @@ function count_items($table, $where = null, $param = null) {
     $stmt = $mysqli->prepare($query);
     if ($where) $stmt->bind_param("s", $param);
     $stmt->execute();
+    global $count;
     $stmt->bind_result($count);
     $stmt->fetch();
     $stmt->close();
