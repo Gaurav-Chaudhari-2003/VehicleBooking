@@ -7,30 +7,42 @@ $aid = $_SESSION['a_id'];
 
 // Add User
 if (isset($_POST['add_user'])) {
-    $u_fname = $_POST['u_fname'];
-    $u_lname = $_POST['u_lname'];
-    $u_phone = $_POST['u_phone'];
-    $u_addr = $_POST['u_addr'];
-    $u_email = $_POST['u_email'];
-    $u_pwd = $_POST['u_pwd'];
-    $u_category = $_POST['u_category'];
+    $u_fname = trim($_POST['u_fname']);
+    $u_lname = trim($_POST['u_lname']);
+    $u_phone = trim($_POST['u_phone']);
+    $u_addr = trim($_POST['u_addr']);
+    $u_email = trim($_POST['u_email']);
+    $u_pwd = $_POST['u_pwd']; // Password should be hashed in a real app
+    $u_category = 'User';
 
-    // Default values for fields that don't have a default value in DB
-    $u_car_type = '';
-    $u_car_regno = '';
-    $u_car_bookdate = '';
-    $u_car_book_status = '';
+    global $mysqli;
 
-    $query = "INSERT INTO tms_user (u_fname, u_lname, u_phone, u_addr, u_category, u_email, u_pwd, u_car_type, u_car_regno, u_car_bookdate, u_car_book_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    $stmt = $mysqli->prepare($query);
-    $stmt->bind_param('sssssssssss', $u_fname, $u_lname, $u_phone, $u_addr, $u_category, $u_email, $u_pwd, $u_car_type, $u_car_regno, $u_car_bookdate, $u_car_book_status);
-    $stmt->execute();
+    // Check if email already exists
+    $check_stmt = $mysqli->prepare("SELECT u_email FROM tms_user WHERE u_email = ?");
+    $check_stmt->bind_param('s', $u_email);
+    $check_stmt->execute();
+    $check_stmt->store_result();
 
-    if ($stmt) {
-        $succ = "User Added Successfully";
+    if ($check_stmt->num_rows > 0) {
+        $err = "User with this email already exists!";
     } else {
-        $err = "Something went wrong. Please try again.";
+        // Default values for fields that don't have a default value in DB
+        $u_car_type = '';
+        $u_car_regno = '';
+        $u_car_bookdate = '';
+        $u_car_book_status = '';
+
+        $stmt = $mysqli->prepare("INSERT INTO tms_user (u_fname, u_lname, u_phone, u_addr, u_category, u_email, u_pwd, u_car_type, u_car_regno, u_car_bookdate, u_car_book_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param('sssssssssss', $u_fname, $u_lname, $u_phone, $u_addr, $u_category, $u_email, $u_pwd, $u_car_type, $u_car_regno, $u_car_bookdate, $u_car_book_status);
+        
+        if ($stmt->execute()) {
+            $succ = "User Added Successfully";
+        } else {
+            $err = "Something went wrong. Please try again.";
+        }
+        $stmt->close();
     }
+    $check_stmt->close();
 }
 ?>
 
@@ -82,7 +94,7 @@ if (isset($_POST['add_user'])) {
                             <label>Address</label>
                             <input type="text" required class="form-control" name="u_addr" placeholder="Enter Address">
                         </div>
-                        <input type="hidden" name="u_category" value="User">
+
                         <div class="form-group">
                             <label>Email Address</label>
                             <input type="email" required class="form-control" name="u_email" placeholder="Enter Email Address">

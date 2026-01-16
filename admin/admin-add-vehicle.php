@@ -17,32 +17,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_veh'])) {
     $v_status   = "Available"; // Set status to Available by default
     $v_driver   = $_POST['v_driver'];
 
-    // Image Upload Logic
-    $v_dpic = 'placeholder.png'; // default
-    if (isset($_FILES["v_dpic"]) && $_FILES["v_dpic"]["error"] === 0) {
-        $check = getimagesize($_FILES["v_dpic"]["tmp_name"]);
-        if ($check !== false) {
-            $target_dir = "../vendor/img/";
-            $v_dpic = basename($_FILES["v_dpic"]["name"]);
-            $target_file = $target_dir . $v_dpic;
-            move_uploaded_file($_FILES["v_dpic"]["tmp_name"], $target_file);
-        }
-    }
+    // Check if vehicle registration number already exists
+    $check_stmt = $mysqli->prepare("SELECT v_reg_no FROM tms_vehicle WHERE v_reg_no = ?");
+    $check_stmt->bind_param('s', $v_reg_no);
+    $check_stmt->execute();
+    $check_stmt->store_result();
 
-    $query = "INSERT INTO tms_vehicle (v_name, v_pass_no, v_reg_no, v_driver, v_category, v_dpic, v_status) 
-              VALUES (?, ?, ?, ?, ?, ?, ?)";
-    $stmt = $mysqli->prepare($query);
-    $stmt->bind_param('sssssss', $v_name, $v_pass_no, $v_reg_no, $v_driver, $v_category, $v_dpic, $v_status);
-
-    if ($stmt->execute()) {
-        $_SESSION['succ'] = "Vehicle Added Successfully";
+    if ($check_stmt->num_rows > 0) {
+        $_SESSION['err'] = "Vehicle with this Registration Number already exists!";
         header("Location: " . $_SERVER['PHP_SELF']);
         exit();
     } else {
-        $_SESSION['err'] = "Please Try Again Later";
-        header("Location: " . $_SERVER['PHP_SELF']);
-        exit();
+        // Image Upload Logic
+        $v_dpic = 'placeholder.png'; // default
+        if (isset($_FILES["v_dpic"]) && $_FILES["v_dpic"]["error"] === 0) {
+            $check = getimagesize($_FILES["v_dpic"]["tmp_name"]);
+            if ($check !== false) {
+                $target_dir = "../vendor/img/";
+                $v_dpic = basename($_FILES["v_dpic"]["name"]);
+                $target_file = $target_dir . $v_dpic;
+                move_uploaded_file($_FILES["v_dpic"]["tmp_name"], $target_file);
+            }
+        }
+
+        $query = "INSERT INTO tms_vehicle (v_name, v_pass_no, v_reg_no, v_driver, v_category, v_dpic, v_status) 
+                  VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $mysqli->prepare($query);
+        $stmt->bind_param('sssssss', $v_name, $v_pass_no, $v_reg_no, $v_driver, $v_category, $v_dpic, $v_status);
+
+        if ($stmt->execute()) {
+            $_SESSION['succ'] = "Vehicle Added Successfully";
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit();
+        } else {
+            $_SESSION['err'] = "Please Try Again Later";
+            header("Location: " . $_SERVER['PHP_SELF']);
+            exit();
+        }
+        $stmt->close();
     }
+    $check_stmt->close();
 }
 
 // Load messages from session and clear them
@@ -153,6 +167,7 @@ if (isset($_SESSION['err'])) {
 <script src="vendor/jquery/jquery.min.js"></script>
 <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="vendor/jquery-easing/jquery.easing.min.js"></script>
+<script src="vendor/chart.js/Chart.min.js"></script>
 <script src="vendor/datatables/jquery.dataTables.js"></script>
 <script src="vendor/datatables/dataTables.bootstrap4.js"></script>
 <script src="vendor/js/sb-admin.min.js"></script>

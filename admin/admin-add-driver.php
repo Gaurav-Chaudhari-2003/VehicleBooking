@@ -7,30 +7,43 @@ $aid = $_SESSION['a_id'];
 
 // Add Driver
 if (isset($_POST['add_driver'])) {
-    $u_fname = $_POST['u_fname'];
-    $u_lname = $_POST['u_lname'];
-    $u_phone = $_POST['u_phone'];
-    $u_addr = $_POST['u_addr'];
-    $u_email = $_POST['u_email'];
+    $u_fname = trim($_POST['u_fname']);
+    $u_lname = trim($_POST['u_lname']);
+    $u_phone = trim($_POST['u_phone']);
+    $u_addr = trim($_POST['u_addr']);
+    $u_email = trim($_POST['u_email']);
     $u_pwd = $_POST['u_pwd'];
-    $u_category = $_POST['u_category'];
+    $u_category = 'Driver';
 
-    // Default values for fields that don't have a default value in DB
-    $u_car_type = '';
-    $u_car_regno = '';
-    $u_car_bookdate = '';
-    $u_car_book_status = '';
+    global $mysqli;
 
-    $query = "INSERT INTO tms_user (u_fname, u_lname, u_phone, u_addr, u_category, u_email, u_pwd, u_car_type, u_car_regno, u_car_bookdate, u_car_book_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    $stmt = $mysqli->prepare($query);
-    $stmt->bind_param('sssssssssss', $u_fname, $u_lname, $u_phone, $u_addr, $u_category, $u_email, $u_pwd, $u_car_type, $u_car_regno, $u_car_bookdate, $u_car_book_status);
-    $stmt->execute();
+    // Check if email already exists
+    $check_stmt = $mysqli->prepare("SELECT u_email FROM tms_user WHERE u_email = ?");
+    $check_stmt->bind_param('s', $u_email);
+    $check_stmt->execute();
+    $check_stmt->store_result();
 
-    if ($stmt) {
-        $succ = "Driver Added Successfully";
+    if ($check_stmt->num_rows > 0) {
+        $err = "Driver with this email already exists!";
     } else {
-        $err = "Something went wrong. Please try again.";
+        // Default values for fields that don't have a default value in DB
+        $u_car_type = '';
+        $u_car_regno = '';
+        $u_car_bookdate = '';
+        $u_car_book_status = '';
+
+        $query = "INSERT INTO tms_user (u_fname, u_lname, u_phone, u_addr, u_category, u_email, u_pwd, u_car_type, u_car_regno, u_car_bookdate, u_car_book_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $mysqli->prepare($query);
+        $stmt->bind_param('sssssssssss', $u_fname, $u_lname, $u_phone, $u_addr, $u_category, $u_email, $u_pwd, $u_car_type, $u_car_regno, $u_car_bookdate, $u_car_book_status);
+        
+        if ($stmt->execute()) {
+            $succ = "Driver Added Successfully";
+        } else {
+            $err = "Something went wrong. Please try again.";
+        }
+        $stmt->close();
     }
+    $check_stmt->close();
 }
 ?>
 <!DOCTYPE html>
@@ -47,18 +60,18 @@ if (isset($_POST['add_driver'])) {
         <div class="container-fluid">
 
             <?php if (isset($succ)) { ?>
-                <!-- Success Toast -->
+                <!-- Success Alert -->
                 <script>
                     setTimeout(function() {
-                        toastr.success("<?php echo $succ; ?>");
+                        swal("Success!", "<?php echo $succ; ?>", "success");
                     }, 100);
                 </script>
             <?php } ?>
             <?php if (isset($err)) { ?>
-                <!-- Error Toast -->
+                <!-- Error Alert -->
                 <script>
                     setTimeout(function() {
-                        toastr.error("<?php echo $err; ?>");
+                        swal("Failed!", "<?php echo $err; ?>", "error");
                     }, 100);
                 </script>
             <?php } ?>
@@ -86,10 +99,7 @@ if (isset($_POST['add_driver'])) {
                             <label for="u_addr">Address</label>
                             <input type="text" required class="form-control" id="u_addr" name="u_addr" placeholder="Enter Address">
                         </div>
-                        <div class="form-group" style="display:none">
-                            <label for="u_category">Category</label>
-                            <input type="text" class="form-control" id="u_category" value="Driver" name="u_category">
-                        </div>
+
                         <div class="form-group">
                             <label for="u_email">Email</label>
                             <input type="email" required class="form-control" id="u_email" name="u_email" placeholder="Enter Email Address">
@@ -118,8 +128,8 @@ if (isset($_POST['add_driver'])) {
 <script src="vendor/jquery/jquery.min.js"></script>
 <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
 
-<!-- Toastr Notification JavaScript-->
-<script src="vendor/toastr/toastr.min.js"></script>
+<!-- SweetAlert -->
+<script src="vendor/js/swal.js"></script>
 
 <!-- Custom scripts for all pages-->
 <script src="vendor/js/sb-admin.min.js"></script>
@@ -131,15 +141,15 @@ if (isset($_POST['add_driver'])) {
         var phone = document.getElementById("u_phone").value;
         var password = document.getElementById("u_pwd").value;
         if (!validateEmail(email)) {
-            toastr.error("Please enter a valid email address.");
+            swal("Error!", "Please enter a valid email address.", "error");
             return false;
         }
         if (!validatePhone(phone)) {
-            toastr.error("Please enter a valid contact number.");
+            swal("Error!", "Please enter a valid contact number.", "error");
             return false;
         }
         if (password.length < 6) {
-            toastr.error("Password should be at least 6 characters.");
+            swal("Error!", "Password should be at least 6 characters.", "error");
             return false;
         }
         return true;

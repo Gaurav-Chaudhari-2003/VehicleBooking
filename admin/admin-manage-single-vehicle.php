@@ -15,21 +15,36 @@ if (isset($_POST['update_veh'])) {
     $v_driver = $_POST['v_driver'];
     $v_dpic = $_FILES["v_dpic"]["name"];
 
-    // Handle image upload
-    if (!empty($v_dpic)) {
-        move_uploaded_file($_FILES["v_dpic"]["tmp_name"], "../vendor/img/" . $v_dpic);
-    }
+    global $mysqli;
 
-    // Update vehicle data
-    $query = "UPDATE tms_vehicle SET v_name=?, v_reg_no=?, v_driver=?, v_category=?, v_dpic=?, v_status=? WHERE v_id=?";
-    $stmt = $mysqli->prepare($query);
-    $stmt->bind_param('ssssssi', $v_name, $v_reg_no, $v_driver, $v_category, $v_dpic, $v_status, $v_id);
-    $stmt->execute();
+    // Check if registration number already exists for another vehicle
+    $check_query = "SELECT v_id FROM tms_vehicle WHERE v_reg_no = ? AND v_id != ?";
+    $check_stmt = $mysqli->prepare($check_query);
+    $check_stmt->bind_param('si', $v_reg_no, $v_id);
+    $check_stmt->execute();
+    $check_stmt->store_result();
 
-    if ($stmt) {
-        $succ = "Vehicle Updated Successfully!";
+    if ($check_stmt->num_rows > 0) {
+        $err = "This registration number is already in use by another vehicle!";
     } else {
-        $err = "Please Try Again Later";
+        // Handle image upload
+        if (!empty($v_dpic)) {
+            move_uploaded_file($_FILES["v_dpic"]["tmp_name"], "../vendor/img/" . $v_dpic);
+            $query = "UPDATE tms_vehicle SET v_name=?, v_reg_no=?, v_driver=?, v_category=?, v_dpic=?, v_status=? WHERE v_id=?";
+            $stmt = $mysqli->prepare($query);
+            $stmt->bind_param('ssssssi', $v_name, $v_reg_no, $v_driver, $v_category, $v_dpic, $v_status, $v_id);
+        } else {
+            // Update without changing image
+            $query = "UPDATE tms_vehicle SET v_name=?, v_reg_no=?, v_driver=?, v_category=?, v_status=? WHERE v_id=?";
+            $stmt = $mysqli->prepare($query);
+            $stmt->bind_param('sssssi', $v_name, $v_reg_no, $v_driver, $v_category, $v_status, $v_id);
+        }
+        
+        if ($stmt->execute()) {
+            $succ = "Vehicle Updated Successfully!";
+        } else {
+            $err = "Please Try Again Later";
+        }
     }
 }
 ?>
@@ -83,7 +98,12 @@ if (isset($_POST['update_veh'])) {
 
                             <div class="form-group">
                                 <label for="v_reg_no">Vehicle Registration Number</label>
-                                <input type="text" value="<?php echo $row->v_reg_no; ?>" class="form-control" id="v_reg_no" name="v_reg_no">
+                                <div class="input-group">
+                                    <input type="text" value="<?php echo $row->v_reg_no; ?>" class="form-control" id="v_reg_no" name="v_reg_no" readonly required>
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="enableRegEdit()">Edit</button>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="form-group">
@@ -94,8 +114,10 @@ if (isset($_POST['update_veh'])) {
                             <div class="form-group">
                                 <label for="v_category">Vehicle Category</label>
                                 <select class="form-control" name="v_category" id="v_category">
-                                    <option <?php echo ($row->v_category == "CAR") ? 'selected' : ''; ?>>CAR</option>
+                                    <option <?php echo ($row->v_category == "Sedan") ? 'selected' : ''; ?>>Sedan</option>
                                     <option <?php echo ($row->v_category == "SUV") ? 'selected' : ''; ?>>SUV</option>
+                                    <option <?php echo ($row->v_category == "Truck") ? 'selected' : ''; ?>>Truck</option>
+                                    <option <?php echo ($row->v_category == "Van") ? 'selected' : ''; ?>>Van</option>
                                 </select>
                             </div>
 
@@ -104,6 +126,7 @@ if (isset($_POST['update_veh'])) {
                                 <select class="form-control" name="v_status" id="v_status">
                                     <option <?php echo ($row->v_status == "Booked") ? 'selected' : ''; ?>>Booked</option>
                                     <option <?php echo ($row->v_status == "Available") ? 'selected' : ''; ?>>Available</option>
+                                    <option <?php echo ($row->v_status == "Maintenance") ? 'selected' : ''; ?>>Maintenance</option>
                                 </select>
                             </div>
 
@@ -139,6 +162,24 @@ if (isset($_POST['update_veh'])) {
 
 <!-- SweetAlert -->
 <script src="vendor/js/swal.js"></script>
+
+<script>
+    function enableRegEdit() {
+        swal({
+            title: "Are you sure?",
+            text: "Changing the registration number is a critical action.",
+            icon: "warning",
+            buttons: true,
+            dangerMode: true,
+        })
+        .then((willEdit) => {
+            if (willEdit) {
+                document.getElementById('v_reg_no').removeAttribute('readonly');
+                document.getElementById('v_reg_no').focus();
+            }
+        });
+    }
+</script>
 
 </body>
 

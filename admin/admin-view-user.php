@@ -34,6 +34,15 @@ if (isset($_POST['add_user'])) {
 // Handle Delete User
 if (isset($_GET['del'])) {
     $id = intval($_GET['del']);
+    
+    // First delete related bookings to avoid foreign key constraint failure
+    $del_bookings = "DELETE FROM tms_booking WHERE user_id = ?";
+    $stmt_b = $mysqli->prepare($del_bookings);
+    $stmt_b->bind_param('i', $id);
+    $stmt_b->execute();
+    $stmt_b->close();
+
+    // Then delete the user
     $adn = "DELETE FROM tms_user WHERE u_id = ?";
     $stmt = $mysqli->prepare($adn);
     $stmt->bind_param('i', $id);

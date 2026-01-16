@@ -1,12 +1,12 @@
 <?php
 session_start();
-include('vendor/inc/config.php');  // Make sure this file includes the DB connection setup.
+include('vendor/inc/config.php');
 include('vendor/inc/checklogin.php');
 check_login();
+$aid = $_SESSION['a_id'];
 
 // Check if the form is submitted
 if (isset($_POST['update_user'])) {
-    // Get the data from the form
     $u_id = $_GET['u_id'];
     $u_fname = $_POST['u_fname'];
     $u_lname = $_POST['u_lname'];
@@ -14,17 +14,30 @@ if (isset($_POST['update_user'])) {
     $u_addr = $_POST['u_addr'];
     $u_email = $_POST['u_email'];
     $u_pwd = $_POST['u_pwd'];
-    $u_category = $_POST['u_category']; // If hidden field is required
+    $u_category = $_POST['u_category'];
 
-    // Prepare and execute the update query
-    $query = "UPDATE tms_user SET u_fname=?, u_lname=?, u_phone=?, u_addr=?, u_category=?, u_email=?, u_pwd=? WHERE u_id=?";
-    $stmt = $mysqli->prepare($query);
-    $stmt->bind_param('sssssssi', $u_fname, $u_lname, $u_phone, $u_addr, $u_category, $u_email, $u_pwd, $u_id);
+    global $mysqli;
 
-    if ($stmt->execute()) {
-        $succ = "Driver Updated Successfully!";
+    // Check if email already exists for another user
+    $check_query = "SELECT u_id FROM tms_user WHERE u_email = ? AND u_id != ?";
+    $check_stmt = $mysqli->prepare($check_query);
+    $check_stmt->bind_param('si', $u_email, $u_id);
+    $check_stmt->execute();
+    $check_stmt->store_result();
+
+    if ($check_stmt->num_rows > 0) {
+        $err = "This email address is already in use by another user!";
     } else {
-        $err = "Error updating the driver. Please try again later.";
+        // Prepare and execute the update query
+        $query = "UPDATE tms_user SET u_fname=?, u_lname=?, u_phone=?, u_addr=?, u_category=?, u_email=?, u_pwd=? WHERE u_id=?";
+        $stmt = $mysqli->prepare($query);
+        $stmt->bind_param('sssssssi', $u_fname, $u_lname, $u_phone, $u_addr, $u_category, $u_email, $u_pwd, $u_id);
+
+        if ($stmt->execute()) {
+            $succ = "Driver Updated Successfully!";
+        } else {
+            $err = "Error updating the driver. Please try again later.";
+        }
     }
 }
 ?>
@@ -46,7 +59,7 @@ if (isset($_POST['update_user'])) {
             <?php if(isset($succ)) { ?>
                 <script>
                     setTimeout(function () {
-                        toastr.success("<?php echo $succ;?>");
+                        swal("Success!", "<?php echo $succ;?>", "success");
                     }, 100);
                 </script>
             <?php } ?>
@@ -54,7 +67,7 @@ if (isset($_POST['update_user'])) {
             <?php if(isset($err)) { ?>
                 <script>
                     setTimeout(function () {
-                        toastr.error("<?php echo $err;?>");
+                        swal("Error!", "<?php echo $err;?>", "error");
                     }, 100);
                 </script>
             <?php } ?>
@@ -65,7 +78,6 @@ if (isset($_POST['update_user'])) {
                 </div>
                 <div class="card-body">
 
-                    <!-- Add User Form -->
                     <?php
                     $aid = $_GET['u_id'];
                     $ret = "SELECT * FROM tms_user WHERE u_id=?";
@@ -103,7 +115,12 @@ if (isset($_POST['update_user'])) {
 
                             <div class="form-group">
                                 <label for="u_email">Email Address</label>
-                                <input type="email" class="form-control" id="u_email" name="u_email" value="<?php echo $row->u_email;?>" required>
+                                <div class="input-group">
+                                    <input type="email" class="form-control" id="u_email" name="u_email" value="<?php echo $row->u_email;?>" readonly required>
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="enableEmailEdit()">Edit</button>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="form-group">
@@ -134,9 +151,23 @@ if (isset($_POST['update_user'])) {
 <!-- Sweet Alert JS -->
 <script src="vendor/js/swal.js"></script>
 
-<!-- Toastr JS for Toast notifications -->
-<script src="https://cdn.jsdelivr.net/npm/toastr@2.1.4/build/toastr.min.js"></script>
-<link href="https://cdn.jsdelivr.net/npm/toastr@2.1.4/build/toastr.min.css" rel="stylesheet">
+<script>
+    function enableEmailEdit() {
+        swal({
+            title: "Are you sure?",
+            text: "Changing the email address might affect the user's login credentials.",
+            icon: "warning",
+            buttons: true,
+            dangerMode: true,
+        })
+        .then((willEdit) => {
+            if (willEdit) {
+                document.getElementById('u_email').removeAttribute('readonly');
+                document.getElementById('u_email').focus();
+            }
+        });
+    }
+</script>
 
 </body>
 
