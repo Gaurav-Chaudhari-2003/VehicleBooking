@@ -1,8 +1,8 @@
 <?php
 global $mysqli;
 session_start();
-include('vendor/inc/config.php');
-include('vendor/inc/checklogin.php');
+include('../DATABASE FILE/config.php');
+include('../DATABASE FILE/checklogin.php');
 check_login();
 $aid = $_SESSION['a_id'];
 

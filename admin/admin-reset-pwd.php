@@ -1,6 +1,7 @@
 <?php
   //session_start();
-  include('vendor/inc/config.php');
+include('../DATABASE FILE/config.php');
+include('../DATABASE FILE/checklogin.php');
   if(isset($_POST['reset-pwd']))
     {
             $r_email= $_POST['r_email'];

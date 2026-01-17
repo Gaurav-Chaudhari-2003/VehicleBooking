@@ -1,7 +1,7 @@
 <?php
 session_start();
-require_once 'vendor/inc/config.php';
-require_once 'vendor/inc/checklogin.php';
+include('../DATABASE FILE/config.php');
+include('../DATABASE FILE/checklogin.php');
 check_login();
 
 header('Content-Type: application/json');

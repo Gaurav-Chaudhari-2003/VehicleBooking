@@ -19,8 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['logout'])) {
 }
 
 // Include configs and auth
-require_once 'vendor/inc/config.php';
-require_once 'vendor/inc/checklogin.php';
+include('../DATABASE FILE/config.php');
+include('../DATABASE FILE/checklogin.php');
 check_login();
 $aid = $_SESSION['a_id'] ?? null;
 

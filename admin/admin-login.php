@@ -1,6 +1,7 @@
 <?php
 session_start();
-include('vendor/inc/config.php'); // get configuration file
+include('../DATABASE FILE/config.php');
+include('../DATABASE FILE/checklogin.php');
 
 // Prevent caching to ensure the back button doesn't show a stale page
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
