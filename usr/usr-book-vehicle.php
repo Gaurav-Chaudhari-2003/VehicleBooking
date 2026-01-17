@@ -286,7 +286,12 @@ if ($aid) {
     }
 
     function setDateLimits(modal) {
-        const today = new Date().toISOString().split('T')[0];
+        // Calculate date 15 days ago
+        const today = new Date();
+        const pastDate = new Date(today);
+        pastDate.setDate(today.getDate() - 15);
+        const minDateStr = pastDate.toISOString().split('T')[0];
+
         const fromInput = modal.querySelector('.book-from-date');
         const toInput = modal.querySelector('.book-to-date');
         const vehicleId = modal.querySelector('input[name="v_id"]').value;
@@ -300,7 +305,7 @@ if ($aid) {
             // Sort approvedRanges by date
             approvedRanges.sort((a, b) => new Date(a.book_from_date) - new Date(b.book_from_date));
 
-            const fromPicker = flatpickr(fromInput, buildFlatpickrOptions(approvedRanges, pendingRanges, today));
+            const fromPicker = flatpickr(fromInput, buildFlatpickrOptions(approvedRanges, pendingRanges, minDateStr));
 
             // Ensure when 'From Date' changes, 'To Date' is enabled
             fromPicker.config.onChange.push(function(selectedDates, dateStr) {
