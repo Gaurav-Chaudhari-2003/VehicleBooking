@@ -2,6 +2,6 @@
 $dbuser="root";
 $dbpass="admin";
 $host="localhost";
-$db="vehiclebookings";
+$db="vehicle_booking";
 $mysqli=new mysqli($host,$dbuser, $dbpass, $db);
 
