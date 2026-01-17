@@ -5,6 +5,7 @@
     {
             $r_email= $_POST['r_email'];
             $query="INSERT INTO tms_pwd_resets (r_email) VALUES(?) ";
+            global $mysqli;
             $stmt = $mysqli->prepare($query);
             $rc=$stmt->bind_param('s', $r_email);
             $stmt->execute();//ok
@@ -83,7 +84,7 @@
         </form>
 
         <div class="text-center">
-          <a class="d-block small" href="index.php">Login Page</a>
+          <a class="d-block small" href="admin-login.php">Login Page</a>
         </div>
       </div>
     </div>

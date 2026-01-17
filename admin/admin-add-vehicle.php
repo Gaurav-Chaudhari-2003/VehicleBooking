@@ -13,12 +13,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_veh'])) {
     $v_name     = $_POST['v_name'];
     $v_reg_no   = $_POST['v_reg_no'];
     $v_category = $_POST['v_category'];
-    $v_pass_no  = $_POST['v_pass_no'];
-    $v_status   = "Available"; // Set status to Available by default
-    $v_driver   = $_POST['v_driver'];
-
+    $v_fuel_type = $_POST['v_fuel_type']; 
+    $v_capacity = $_POST['v_capacity'];   
+    $v_status   = "AVAILABLE"; 
+    $v_remark   = trim($_POST['v_remark']);
+    
     // Check if vehicle registration number already exists
-    $check_stmt = $mysqli->prepare("SELECT v_reg_no FROM tms_vehicle WHERE v_reg_no = ?");
+    $check_stmt = $mysqli->prepare("SELECT reg_no FROM vehicles WHERE reg_no = ?");
     $check_stmt->bind_param('s', $v_reg_no);
     $check_stmt->execute();
     $check_stmt->store_result();
@@ -40,12 +41,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_veh'])) {
             }
         }
 
-        $query = "INSERT INTO tms_vehicle (v_name, v_pass_no, v_reg_no, v_driver, v_category, v_dpic, v_status) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?)";
+        // New Schema: vehicles table
+        // Columns: name, reg_no, category, fuel_type, capacity, status, image
+        $query = "INSERT INTO vehicles (name, reg_no, category, fuel_type, capacity, status, image) VALUES (?, ?, ?, ?, ?, ?, ?)";
         $stmt = $mysqli->prepare($query);
-        $stmt->bind_param('sssssss', $v_name, $v_pass_no, $v_reg_no, $v_driver, $v_category, $v_dpic, $v_status);
+        $stmt->bind_param('ssssiss', $v_name, $v_reg_no, $v_category, $v_fuel_type, $v_capacity, $v_status, $v_dpic);
 
         if ($stmt->execute()) {
+            $new_vehicle_id = $stmt->insert_id;
+            
+            // Insert Remark if provided
+            if (!empty($v_remark)) {
+                // entity_type='VEHICLE', entity_id=new_vehicle_id, user_id=admin_id
+                $remark_stmt = $mysqli->prepare("INSERT INTO entity_remarks (entity_type, entity_id, user_id, remark) VALUES ('VEHICLE', ?, ?, ?)");
+                $remark_stmt->bind_param('iis', $new_vehicle_id, $aid, $v_remark);
+                $remark_stmt->execute();
+                
+                // Update last_remark_id in vehicles table
+                $last_remark_id = $remark_stmt->insert_id;
+                $update_veh = $mysqli->prepare("UPDATE vehicles SET last_remark_id = ? WHERE id = ?");
+                $update_veh->bind_param('ii', $last_remark_id, $new_vehicle_id);
+                $update_veh->execute();
+                $update_veh->close();
+                
+                $remark_stmt->close();
+            }
+
             $_SESSION['succ'] = "Vehicle Added Successfully";
             header("Location: " . $_SERVER['PHP_SELF']);
             exit();
@@ -98,63 +119,86 @@ if (isset($_SESSION['err'])) {
                 </script>
             <?php endif; ?>
 
-            <div class="card">
-                <div class="card-header">Add Vehicle</div>
+            <div class="card shadow-lg border-0 rounded-lg mt-4">
+                <div class="card-header bg-primary text-white d-flex align-items-center">
+                    <a href="javascript:void(0);" onclick="window.location.replace('admin-dashboard.php')" class="btn btn-light btn-sm mr-3 text-primary font-weight-bold"><i class="fas fa-arrow-left"></i> Back</a>
+                    <h4 class="font-weight-bold mb-0 flex-grow-1 text-center" style="margin-right: 60px;"><i class="fas fa-bus"></i> Add New Vehicle</h4>
+                </div>
                 <div class="card-body">
                     <form method="POST" enctype="multipart/form-data">
-                        <div class="form-group">
-                            <label for="v_name">Vehicle Name</label>
-                            <input type="text" required class="form-control" id="v_name" name="v_name" placeholder="Enter vehicle name">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">Vehicle Name</label>
+                                    <input type="text" required class="form-control" id="v_name" name="v_name" placeholder="Enter vehicle name">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">Registration Number</label>
+                                    <input type="text" class="form-control" id="v_reg_no" name="v_reg_no" placeholder="Enter vehicle registration number">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">Category</label>
+                                    <select class="form-control" name="v_category" id="v_category">
+                                        <option value="SEDAN">Sedan</option>
+                                        <option value="SUV">SUV</option>
+                                        <option value="BUS">Bus</option>
+                                        <option value="TRUCK">Truck</option>
+                                        <option value="VAN">Van</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">Fuel Type</label>
+                                    <select class="form-control" name="v_fuel_type" id="v_fuel_type">
+                                        <option value="PETROL">Petrol</option>
+                                        <option value="DIESEL">Diesel</option>
+                                        <option value="CNG">CNG</option>
+                                        <option value="ELECTRIC">Electric</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">Capacity (Seats)</label>
+                                    <input type="number" min="1" class="form-control" id="v_capacity" name="v_capacity" placeholder="Enter number of seats">
+                                </div>
+                            </div>
                         </div>
 
                         <div class="form-group">
-                            <label for="v_reg_no">Vehicle Registration Number</label>
-                            <input type="text" class="form-control" id="v_reg_no" name="v_reg_no" placeholder="Enter vehicle registration number">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="v_pass_no">Number of Seats</label>
-                            <input type="number" min="1" class="form-control" id="v_pass_no" name="v_pass_no" placeholder="Enter number of seats">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="v_driver">Driver</label>
-                            <select class="form-control" name="v_driver" id="v_driver">
-                                <?php
-                                $ret = "SELECT * FROM tms_user WHERE u_category = 'Driver'";
-                                $stmt = $mysqli->prepare($ret);
-                                $stmt->execute();
-                                $res = $stmt->get_result();
-                                while ($row = $res->fetch_object()) {
-                                    echo "<option>{$row->u_fname} {$row->u_lname}</option>";
-                                }
-                                ?>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="v_category">Vehicle Category</label>
-                            <select class="form-control" name="v_category" id="v_category">
-                                <option>Sedan</option>
-                                <option>SUV</option>
-                                <option>Truck</option>
-                                <option>Van</option>
-                            </select>
+                            <label class="font-weight-bold">Remark (Optional)</label>
+                            <textarea class="form-control" name="v_remark" rows="2" placeholder="Enter any initial remarks about the vehicle..."></textarea>
                         </div>
 
                         <div class="form-group" style="display:none">
                             <label for="v_status">Vehicle Status</label>
-                            <input type="text" class="form-control" id="v_status" name="v_status" value="Available" readonly>
+                            <input type="text" class="form-control" id="v_status" name="v_status" value="AVAILABLE" readonly>
                         </div>
 
                         <div class="form-group">
-                            <label for="v_dpic">Vehicle Picture</label>
-                            <input type="file" class="form-control" id="v_dpic" name="v_dpic" accept="image/*" onchange="previewImage(event)">
-                            <br>
-                            <img id="imagePreview" src="vendor/img/placeholder.png" alt="Image Preview" style="max-width: 400px; border-radius: 8px; display: none;" />
+                            <label class="font-weight-bold">Vehicle Picture</label>
+                            <div class="custom-file">
+                                <input type="file" class="custom-file-input" id="v_dpic" name="v_dpic" accept="image/*" onchange="previewImage(event)">
+                                <label class="custom-file-label" for="v_dpic">Choose file...</label>
+                            </div>
+                            <div class="mt-3 text-center">
+                                <img id="imagePreview" src="vendor/img/placeholder.png" alt="Image Preview" class="img-thumbnail shadow-sm" style="max-width: 300px; max-height: 200px; display: none;" />
+                            </div>
                         </div>
 
-                        <button type="submit" name="add_veh" class="btn btn-success">Add Vehicle</button>
+                        <div class="text-center mt-4">
+                            <button type="submit" name="add_veh" class="btn btn-success btn-lg px-5 shadow-sm">
+                                <i class="fas fa-plus-circle"></i> Add Vehicle
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -178,14 +222,16 @@ if (isset($_SESSION['err'])) {
     function previewImage(event) {
         const input = event.target;
         const preview = document.getElementById('imagePreview');
+        const label = document.querySelector('.custom-file-label');
 
         if (input.files && input.files[0]) {
             const reader = new FileReader();
             reader.onload = function(e) {
                 preview.src = e.target.result;
-                preview.style.display = 'block';
+                preview.style.display = 'inline-block';
             };
             reader.readAsDataURL(input.files[0]);
+            label.textContent = input.files[0].name;
         }
     }
 </script>

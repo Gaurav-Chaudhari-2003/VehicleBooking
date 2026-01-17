@@ -64,7 +64,10 @@ function count_items($table, $where = null, $param = null) {
 }
 
 // Updated counts based on new schema roles
-$user_count = count_items('users', 'is_active', 1); // Assuming 'User' maps to 'EMPLOYEE' or similar in new schema
+$employee_count = count_items('users', 'role', 'EMPLOYEE');
+$driver_count = count_items('users', 'role', 'DRIVER');
+$manager_count = count_items('users', 'role', 'MANAGER');
+$admin_count = count_items('users', 'role', 'ADMIN');
 $vehicle_count = count_items('vehicles'); // Table name changed to 'vehicles'
 
 date_default_timezone_set("Asia/Kolkata");
@@ -89,6 +92,7 @@ date_default_timezone_set("Asia/Kolkata");
         }
         .hover-translate {
             transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            cursor: pointer; /* Indicate clickable */
         }
         .hover-translate:hover {
             transform: translateY(-4px);
@@ -110,6 +114,35 @@ date_default_timezone_set("Asia/Kolkata");
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
             cursor: pointer;
         }
+        
+        /* Custom Stats Styling */
+        .stats-container {
+            display: flex;
+            justify-content: space-around;
+            padding: 15px 0;
+        }
+        .stat-box {
+            text-align: center;
+            padding: 10px 20px;
+            border-radius: 10px;
+            background-color: #f8f9fa;
+            min-width: 100px;
+        }
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: block;
+        }
+        .stat-label {
+            font-size: 0.85rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .text-primary-custom { color: #0d6efd; }
+        .text-success-custom { color: #198754; }
+        .text-info-custom { color: #0dcaf0; }
+        .text-warning-custom { color: #ffc107; }
     </style>
     <script>
         // Force browser back button to redirect to project homepage
@@ -251,31 +284,52 @@ date_default_timezone_set("Asia/Kolkata");
 
     <!-- Dashboard Cards -->
     <div class="row g-4">
-        <?php
-        $cards = [
-            ['id' => 'user-count', 'count' => $user_count, 'title' => 'Users', 'icon' => 'fas fa-users', 'color' => 'primary', 'link' => 'admin-view-user.php'],
-            ['id' => 'vehicle-count', 'count' => $vehicle_count, 'title' => 'Vehicles', 'icon' => 'fas fa-bus', 'color' => 'warning', 'link' => 'admin-view-vehicle.php'],
-        ];
-        foreach ($cards as $card):
-            ?>
-            <div class="col-md-6">
-                <div class="card text-center hover-translate shadow-sm">
-                    <div class="card-body">
-                        <i class="<?= $card['icon']; ?> fa-3x text-<?= $card['color']; ?> mb-3"></i>
-                        <h5 class="card-title" id="<?= $card['id']; ?>"><?= $card['count'] . " " . $card['title']; ?></h5>
-                        <a href="javascript:void(0);" onclick="window.location.replace('<?= $card['link']; ?>')" class="btn btn-outline-<?= $card['color']; ?> btn-sm mt-2">View Details</a>
+        <!-- Users Card -->
+        <div class="col-md-6">
+            <div class="card text-center hover-translate shadow-sm h-100" onclick="window.location.replace('admin-view-user.php')">
+                <div class="card-body">
+                    <h5 class="card-title mb-3"><i class="fas fa-users text-primary me-2"></i> System Users</h5>
+                    
+                    <div class="stats-container">
+                        <div class="stat-box">
+                            <span class="stat-number text-primary-custom" id="employee-count"><?= $employee_count; ?></span>
+                            <span class="stat-label">Employees</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-number text-success-custom" id="driver-count"><?= $driver_count; ?></span>
+                            <span class="stat-label">Drivers</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-number text-info-custom" id="manager-count"><?= $manager_count; ?></span>
+                            <span class="stat-label">Managers</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-number text-warning-custom" id="admin-count"><?= $admin_count; ?></span>
+                            <span class="stat-label">Admins</span>
+                        </div>
                     </div>
                 </div>
             </div>
-        <?php endforeach; ?>
+        </div>
+
+        <!-- Vehicles Card -->
+        <div class="col-md-6">
+            <div class="card text-center hover-translate shadow-sm h-100" onclick="window.location.replace('admin-view-vehicle.php')">
+                <div class="card-body d-flex flex-column justify-content-center align-items-center">
+                    <i class="fas fa-bus fa-3x text-warning mb-3"></i>
+                    <h5 class="card-title" id="vehicle-count"><?= $vehicle_count . " Vehicles"; ?></h5>
+                    <p class="text-muted">Total registered vehicles in fleet</p>
+                </div>
+            </div>
+        </div>
     </div>
 
 
 
     <!-- Bookings Table -->
-    <div class="card mb-3">
+    <div class="card mb-3 mt-4">
         <div class="card-header">
-            <i class="fas fa-bus"></i> Vehicles
+            <i class="fas fa-bus"></i> Recent Bookings
         </div>
         <div class="card-body">
             <div class="table-responsive">
@@ -321,8 +375,11 @@ date_default_timezone_set("Asia/Kolkata");
                 dataType: 'json',
                 success: function (data) {
                     // Update counts
-                    $('#user-count').text(data.user_count + ' Users');
-                    $('#driver-count').text(data.driver_count + ' Drivers');
+                    $('#employee-count').text(data.employee_count);
+                    $('#driver-count').text(data.driver_count);
+                    $('#manager-count').text(data.manager_count);
+                    $('#admin-count').text(data.admin_count);
+
                     $('#vehicle-count').text(data.vehicle_count + ' Vehicles');
                     $('#last-updated').text('Last updated at ' + data.last_updated);
 

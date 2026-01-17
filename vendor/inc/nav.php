@@ -19,7 +19,7 @@
           </li>
 
             <li class="nav-item">
-                <a class="nav-link" href="admin/">Admin Login</a>
+                <a class="nav-link" href="admin/admin-login.php">Admin Login</a>
             </li>
 
             <li class="nav-item">
