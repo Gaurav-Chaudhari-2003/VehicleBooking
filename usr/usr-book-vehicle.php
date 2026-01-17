@@ -1,8 +1,8 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
 
-include_once('vendor/inc/config.php');
-include_once('vendor/inc/checklogin.php');
+include('../DATABASE FILE/config.php');
+include('../DATABASE FILE/checklogin.php');
 check_login();
 
 global $mysqli;
@@ -12,7 +12,8 @@ $aid = $_SESSION['u_id'] ?? null;
 
 $user = null;
 if ($aid) {
-    $stmt = $mysqli->prepare("SELECT u_fname, u_lname, u_email, u_phone FROM tms_user WHERE u_id = ?");
+    // Updated query to match new schema: users table
+    $stmt = $mysqli->prepare("SELECT first_name, last_name, email, phone FROM users WHERE id = ?");
     $stmt->bind_param('i', $aid);
     $stmt->execute();
     $user = $stmt->get_result()->fetch_object();
@@ -108,38 +109,37 @@ if ($aid) {
                     <label for="seatFilter"></label><select id="seatFilter" class="form-control">
                         <option value="">Filter by Seats</option>
                         <?php
-                        $seatStmt = $mysqli->prepare("SELECT DISTINCT v_pass_no FROM tms_vehicle WHERE v_status = 'Available' ORDER BY v_pass_no");
+                        // Updated query to match new schema: vehicles table
+                        $seatStmt = $mysqli->prepare("SELECT DISTINCT capacity FROM vehicles WHERE status = 'AVAILABLE' ORDER BY capacity");
                         $seatStmt->execute();
                         $seatResult = $seatStmt->get_result();
                         while ($seatRow = $seatResult->fetch_object()) {
-                            echo "<option value='$seatRow->v_pass_no'>$seatRow->v_pass_no</option>";
+                            echo "<option value='$seatRow->capacity'>$seatRow->capacity</option>";
                         }
                         $seatStmt->close();
                         ?>
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <label for="driverFilter"></label><input type="text" id="driverFilter" class="form-control"
-                                                             placeholder="Filter by Driver">
-                </div>
+                <!-- Driver filter removed as it's not directly available in vehicles table -->
             </div>
 
             <div class="row" id="vehicleCards">
                 <?php
-                $stmt = $mysqli->prepare("SELECT * FROM tms_vehicle WHERE v_status = 'Available'");
+                // Updated query to match new schema: vehicles table
+                $stmt = $mysqli->prepare("SELECT * FROM vehicles WHERE status = 'AVAILABLE'");
                 $stmt->execute();
                 $res = $stmt->get_result();
                 while ($row = $res->fetch_object()) {
-                    $imagePath = $projectFolder . 'vendor/img/' . ($row->v_dpic ?: 'placeholder.png');
+                    $imagePath = $projectFolder . 'vendor/img/' . ($row->image ?: 'placeholder.png');
                     ?>
                     <!-- Modal -->
-                    <div class="modal fade" id="bookModal<?php echo $row->v_id; ?>" tabindex="-1"
-                         aria-labelledby="bookModalLabel<?php echo $row->v_id; ?>" aria-hidden="true">
+                    <div class="modal fade" id="bookModal<?php echo $row->id; ?>" tabindex="-1"
+                         aria-labelledby="bookModalLabel<?php echo $row->id; ?>" aria-hidden="true">
                         <div class="modal-dialog modal-dialog-centered">
                             <div class="modal-content border-0 shadow-lg rounded-4">
                                 <form method="POST" action="user-confirm-booking.php" onsubmit="return validateBookingDates(this);">
                                     <div class="modal-header bg-warning text-dark rounded-top-4">
-                                        <h5 class="modal-title" id="bookModalLabel<?php echo $row->v_id; ?>">
+                                        <h5 class="modal-title" id="bookModalLabel<?php echo $row->id; ?>">
                                             Confirm Vehicle Booking
                                         </h5>
                                         <button type="button" class="btn-close" data-bs-dismiss="modal"
@@ -148,27 +148,44 @@ if ($aid) {
 
                                     <div class="modal-body">
                                         <div class="mb-2">
-                                            <strong>Category:</strong> <?= $row->v_category; ?><br>
-                                            <strong>Reg. No:</strong> <?= $row->v_reg_no; ?>
+                                            <strong>Category:</strong> <?= $row->category; ?><br>
+                                            <strong>Reg. No:</strong> <?= $row->reg_no; ?>
                                         </div>
 
                                         <div class="row">
                                             <div class="col-6 mb-3">
-                                                <label for="book_from_date<?= $row->v_id; ?>" class="form-label">From
+                                                <label for="book_from_date<?= $row->id; ?>" class="form-label">From
                                                     Date</label>
-                                                <input type="date" onkeydown="return false;" id="book_from_date<?= $row->v_id; ?>" name="book_from_date" class="form-control book-from-date" required>
+                                                <input type="date" onkeydown="return false;" id="book_from_date<?= $row->id; ?>" name="book_from_date" class="form-control book-from-date" required>
                                             </div>
                                             <div class="col-6 mb-3">
-                                                <label for="book_to_date<?= $row->v_id; ?>" class="form-label">To
+                                                <label for="book_to_date<?= $row->id; ?>" class="form-label">To
                                                     Date</label>
-                                                <input type="date" onkeydown="return false;" id="book_to_date<?= $row->v_id; ?>" name="book_to_date" class="form-control book-to-date" required>
+                                                <input type="date" onkeydown="return false;" id="book_to_date<?= $row->id; ?>" name="book_to_date" class="form-control book-to-date" required>
                                             </div>
                                         </div>
 
+                                        <!-- New Fields for Pickup and Drop Location -->
+                                        <div class="row">
+                                            <div class="col-6 mb-3">
+                                                <label for="pickup_location<?= $row->id; ?>" class="form-label">Pickup Location</label>
+                                                <input type="text" id="pickup_location<?= $row->id; ?>" name="pickup_location" class="form-control" required placeholder="Enter pickup location">
+                                            </div>
+                                            <div class="col-6 mb-3">
+                                                <label for="drop_location<?= $row->id; ?>" class="form-label">Drop Location</label>
+                                                <input type="text" id="drop_location<?= $row->id; ?>" name="drop_location" class="form-control" required placeholder="Enter drop location">
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="purpose<?= $row->id; ?>" class="form-label">Purpose</label>
+                                            <textarea id="purpose<?= $row->id; ?>" name="purpose" class="form-control" rows="2" placeholder="Purpose of booking (optional)"></textarea>
+                                        </div>
+
                                         <!-- Hidden Inputs -->
-                                        <input type="hidden" name="v_id" value="<?= $row->v_id; ?>">
-                                        <input type="hidden" name="u_car_type" value="<?= $row->v_category; ?>">
-                                        <input type="hidden" name="u_car_regno" value="<?= $row->v_reg_no; ?>">
+                                        <input type="hidden" name="v_id" value="<?= $row->id; ?>">
+                                        <input type="hidden" name="u_car_type" value="<?= $row->category; ?>">
+                                        <input type="hidden" name="u_car_regno" value="<?= $row->reg_no; ?>">
                                         <input type="hidden" name="u_car_book_status" value="Pending">
                                     </div>
 
@@ -188,19 +205,19 @@ if ($aid) {
 
                     <!-- Card -->
                     <div class="col-md-4 mb-4 vehicle-card"
-                         data-seats="<?= $row->v_pass_no; ?>"
-                         data-driver="<?= strtolower($row->v_driver); ?>">
+                         data-seats="<?= $row->capacity; ?>"
+                         data-driver=""> <!-- Driver info removed as it's not in vehicle table -->
                         <div class="card h-100">
-                            <img src="<?= $imagePath; ?>" class="card-img-top vehicle-img" alt="<?= $row->v_name; ?>">
+                            <img src="<?= $imagePath; ?>" class="card-img-top vehicle-img" alt="<?= $row->name; ?>">
                             <div class="card-body">
-                                <h5 class="card-title"><?= $row->v_name; ?></h5>
+                                <h5 class="card-title"><?= $row->name; ?></h5>
                                 <p class="card-text">
-                                    <strong>Reg No:</strong> <?= $row->v_reg_no; ?><br>
-                                    <strong>Seats:</strong> <?= $row->v_pass_no; ?><br>
-                                    <strong>Driver:</strong> <?= $row->v_driver; ?>
+                                    <strong>Reg No:</strong> <?= $row->reg_no; ?><br>
+                                    <strong>Seats:</strong> <?= $row->capacity; ?><br>
+                                    <!-- <strong>Driver:</strong> Driver info unavailable -->
                                 </p>
                                 <button type="button" class="btn btn-outline-success btn-block" data-bs-toggle="modal"
-                                        data-bs-target="#bookModal<?= $row->v_id; ?>">
+                                        data-bs-target="#bookModal<?= $row->id; ?>">
                                     <i class="fa fa-clipboard"></i> Book Vehicle
                                 </button>
                             </div>
@@ -311,7 +328,7 @@ if ($aid) {
             fromPicker.config.onChange.push(function(selectedDates, dateStr) {
                 if (selectedDates.length > 0) {
                     const fromDate = selectedDates[0];
-                    
+
                     // Enable the 'To Date' input
                     toInput.disabled = false;
 
@@ -327,7 +344,7 @@ if ($aid) {
 
                     // Build options for To Date
                     const toOptions = buildFlatpickrOptions(approvedRanges, pendingRanges, dateStr);
-                    
+
                     if (nextBookingStart) {
                         // Calculate maxDate = nextBookingStart - 1 day
                         const maxDate = new Date(nextBookingStart);
@@ -339,7 +356,7 @@ if ($aid) {
                     const baseOnDayCreate = toOptions.onDayCreate;
                     toOptions.onDayCreate = function(dObj, dStr, fp, dayElem) {
                         baseOnDayCreate(dObj, dStr, fp, dayElem);
-                        
+
                         if (toOptions.maxDate && dObj > toOptions.maxDate) {
                             dayElem.classList.add("overlap-restricted");
                             dayElem.title = "Cannot book past this date due to an upcoming approved booking overlap.";
@@ -382,23 +399,24 @@ if ($aid) {
         function filterVehicles() {
             const query = $('#searchInput').val().toLowerCase().trim();
             const seatFilter = $('#seatFilter').val().trim();
-            const driverFilter = $('#driverFilter').val().toLowerCase().trim();
+            // const driverFilter = $('#driverFilter').val().toLowerCase().trim(); // Removed
 
             $('.vehicle-card').each(function () {
                 const name = $(this).find('.card-title').text().toLowerCase();
                 const reg = $(this).find('.card-text').text().toLowerCase();
-                const driver = $(this).data('driver');
+                // const driver = $(this).data('driver'); // Driver filter disabled
                 const seats = String($(this).data('seats'));
 
                 const matchesQuery = name.includes(query) || reg.includes(query);
                 const matchesSeats = seatFilter === '' || seats === seatFilter;
-                const matchesDriver = driver.includes(driverFilter);
+                // const matchesDriver = driver.includes(driverFilter); // Driver filter disabled
 
-                $(this).toggle(matchesQuery && matchesSeats && matchesDriver);
+                $(this).toggle(matchesQuery && matchesSeats);
             });
         }
 
-        $('#searchInput, #seatFilter, #driverFilter').on('input change', filterVehicles);
+        $('#searchInput, #seatFilter').on('input change', filterVehicles);
+        // Removed driver filter event listener
     });
 </script>
 

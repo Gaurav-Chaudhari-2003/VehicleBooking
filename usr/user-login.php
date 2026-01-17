@@ -1,7 +1,8 @@
 <?php
 global $mysqli;
 session_start();
-include('vendor/inc/config.php'); // Load DB config
+include('../DATABASE FILE/config.php');
+include('../DATABASE FILE/checklogin.php');
 
 // Prevent caching to ensure back button doesn't show stale page
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");

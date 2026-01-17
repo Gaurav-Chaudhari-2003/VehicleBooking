@@ -1,22 +1,21 @@
 <?php
+require_once '../DATABASE FILE/config.php';
+
+$v_id = intval($_GET['v_id']);
+
 global $mysqli;
-include_once('vendor/inc/config.php');
+$stmt = $mysqli->prepare("
+    SELECT 
+        DATE(from_datetime) AS book_from_date,
+        DATE(to_datetime)   AS book_to_date
+    FROM bookings
+    WHERE vehicle_id = ?
+    AND status = 'APPROVED'
+");
 
-if (isset($_GET['v_id'])) {
-    $v_id = intval($_GET['v_id']);
-    $stmt = $mysqli->prepare("
-        SELECT book_from_date, book_to_date 
-        FROM tms_booking 
-        WHERE vehicle_id = ? AND status IN ('Approved')
-    ");
-    $stmt->bind_param("i", $v_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
+$stmt->bind_param("i", $v_id);
+$stmt->execute();
 
-    $bookedDates = [];
-    while ($row = $result->fetch_assoc()) {
-        $bookedDates[] = $row;
-    }
-
-    echo json_encode($bookedDates);
-}
+echo json_encode(
+    $stmt->get_result()->fetch_all(MYSQLI_ASSOC)
+);

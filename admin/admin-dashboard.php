@@ -387,22 +387,24 @@ date_default_timezone_set("Asia/Kolkata");
                     table.clear();
                     data.bookings.forEach(function (row) {
                         const statusClass = {
-                            'Pending': 'warning text-dark',
-                            'Approved': 'success',
-                            'Completed': 'secondary',
-                            'Rejected': 'danger',
-                            'Cancelled': 'danger'
+                            'PENDING': 'warning text-dark',
+                            'APPROVED': 'success',
+                            'COMPLETED': 'secondary',
+                            'REJECTED': 'danger',
+                            'CANCELLED': 'danger'
                         };
                         const badgeClass = statusClass[row.status] || 'secondary';
                         
                         let actions = '';
-                        if (row.status === 'Pending') {
-                            actions += `<a href="javascript:void(0);" onclick="window.location.replace('admin-approve-booking.php?booking_id=${row.booking_id}')" class="btn btn-success btn-sm"><i class="fa fa-check"></i></a> `;
-                        }
-                        actions += `<a href="javascript:void(0);" onclick="window.location.replace('admin-delete-booking.php?booking_id=${row.booking_id}')" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i></a>`;
+                        // Always show Edit button regardless of status
+                        actions += `<a href="javascript:void(0);" onclick="window.location.replace('admin-approve-booking.php?booking_id=${row.booking_id}')" class="btn btn-primary btn-sm"><i class="fa fa-edit"></i></a> `;
 
-                        const fromDate = new Date(row.book_from_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                        const toDate = new Date(row.book_to_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                        // Removed the delete button as requested
+                        // actions += `<a href="javascript:void(0);" onclick="window.location.replace('admin-delete-booking.php?booking_id=${row.booking_id}')" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i></a>`;
+
+                        // Updated to use new schema column names from fetch-dashboard-data.php
+                        const fromDate = new Date(row.from_datetime).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                        const toDate = new Date(row.to_datetime).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
                         
                         const bookedOn = new Date(row.created_at).toLocaleString('en-GB', { 
                             day: '2-digit', 
@@ -417,7 +419,7 @@ date_default_timezone_set("Asia/Kolkata");
                             row.booking_id,
                             `${row.u_fname} ${row.u_lname}`,
                             row.u_phone,
-                            row.v_name,
+                            row.v_name, // Assuming v_name is vehicle type/name
                             row.v_reg_no,
                             bookedOn,
                             `${fromDate} → ${toDate}`,

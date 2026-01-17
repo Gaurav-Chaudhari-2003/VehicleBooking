@@ -1,7 +1,7 @@
 <?php
 session_start();
-include('vendor/inc/config.php');
-include('vendor/inc/checklogin.php');
+include('../DATABASE FILE/config.php');
+include('../DATABASE FILE/checklogin.php');
 check_login();
 
 $u_id = $_SESSION['u_id'];
@@ -15,6 +15,7 @@ if (isset($_POST['update_profile'])) {
     $u_addr  = $_POST['u_addr'];
     $u_email = $_POST['u_email'];
 
+    global $mysqli;
     $stmt = $mysqli->prepare("UPDATE tms_user SET u_fname=?, u_lname=?, u_phone=?, u_addr=?, u_email=? WHERE u_id=?");
     if ($stmt) {
         $stmt->bind_param('sssssi', $u_fname, $u_lname, $u_phone, $u_addr, $u_email, $u_id);

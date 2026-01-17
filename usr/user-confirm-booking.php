@@ -1,81 +1,103 @@
 <?php
-global $mysqli;
 session_start();
-include('vendor/inc/config.php');
-include('vendor/inc/checklogin.php');
+
+require_once '../DATABASE FILE/config.php';
+require_once '../DATABASE FILE/checklogin.php';
 check_login();
 
-$alert_type = '';
-$alert_title = '';
-$alert_text = '';
+global $mysqli;
+
 $redirect_url = 'user-dashboard.php';
 
-if (isset($_POST['book_vehicle'])) {
-    $u_id = $_SESSION['u_id'];
-    $vehicle_id = $_POST['v_id']; // Assuming you're passing vehicle_id in the form
-    $book_from_date = $_POST['book_from_date'];
-    $book_to_date = $_POST['book_to_date'];
-    $status = 'Pending'; // Default status
-    $remarks = isset($_POST['remarks']) && trim($_POST['remarks']) !== '' ? trim($_POST['remarks']) : 'NA';
-
-
-    // STEP 1: Check for existing booking conflicts in the tms_booking table (ONLY for Approved status)
-    // We allow multiple Pending requests for the same dates, but block if it's already Approved.
-    // Check for overlap: (ExistingStart <= NewEnd) AND (ExistingEnd >= NewStart)
-    $statusStmt = $mysqli->prepare("SELECT * FROM tms_booking WHERE vehicle_id = ? AND status = 'Approved' AND book_from_date <= ? AND book_to_date >= ?");
-    $statusStmt->bind_param('iss', $vehicle_id, $book_to_date, $book_from_date);
-    $statusStmt->execute();
-    $statusResult = $statusStmt->get_result();
-
-    if ($statusResult->num_rows > 0) {
-        // There is a conflict with an APPROVED booking
-        $alert_type = 'warning';
-        $alert_title = 'Warning';
-        $alert_text = "This vehicle is already booked (Approved) for the selected date range. Please choose a different range.";
-    } else {
-        // STEP 2: Insert the new booking into the tms_booking table
-        // This will allow overlapping Pending requests
-        $query = "INSERT INTO tms_booking (user_id, vehicle_id, book_from_date, book_to_date, status, remarks) VALUES (?, ?, ?, ?, ?, ?)";
-        $stmt = $mysqli->prepare($query);
-        $stmt->bind_param('iissss', $u_id, $vehicle_id, $book_from_date, $book_to_date, $status, $remarks);
-
-        if ($stmt->execute()) {
-            $alert_type = 'success';
-            $alert_title = 'Success';
-            $alert_text = 'Your vehicle booking request has been successfully submitted! Please wait for admin approval.';
-        } else {
-            $alert_type = 'error';
-            $alert_title = 'Error';
-            $alert_text = 'There was an issue submitting your booking. Please try again later.';
-        }
-    }
+if (!isset($_POST['book_vehicle'])) {
+    header("Location: $redirect_url");
+    exit;
 }
-?>
 
-<?php include("vendor/inc/head.php"); ?>
-<body>
-<!-- Ensure SweetAlert is loaded -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+$user_id   = $_SESSION['u_id'];
+$vehicle_id = intval($_POST['v_id']);
 
-<!-- Display SweetAlert upon action -->
-<?php if (!empty($alert_type)): ?>
-    <script>
-        console.log("Alert Type: <?php echo $alert_type; ?>");  // Debugging: Check if the alert is set
-        console.log("Alert Title: <?php echo $alert_title; ?>");  // Debugging: Check if the title is set
-        console.log("Alert Text: <?php echo $alert_text; ?>");  // Debugging: Check if the text is set
+$from = $_POST['book_from_date'] . " 00:00:00";
+$to   = $_POST['book_to_date']   . " 23:59:59";
 
-        setTimeout(() => {
-            Swal.fire({
-                icon: '<?php echo $alert_type; ?>',
-                title: '<?php echo $alert_title; ?>',
-                text: '<?php echo $alert_text; ?>',
-                showConfirmButton: false,
-                timer: 3000,
-                timerProgressBar: true
-            }).then(() => {
-                window.location.href = '<?php echo $redirect_url; ?>';
-            });
-        }, 100);
-    </script>
-<?php endif; ?>
-</body>
+$pickup  = trim($_POST['pickup_location']);
+$drop    = trim($_POST['drop_location']);
+$purpose = trim($_POST['purpose'] ?? '');
+
+
+// -------- VALIDATION --------
+
+if ($from > $to) {
+    dieAlert("Invalid date range");
+}
+
+if (!$pickup || !$drop) {
+    dieAlert("Pickup and Drop locations required");
+}
+
+
+// -------- CONFLICT CHECK (ONLY APPROVED) --------
+
+$sql = "
+SELECT id FROM bookings
+WHERE vehicle_id = ?
+AND status = 'APPROVED'
+AND from_datetime <= ?
+AND to_datetime >= ?
+";
+
+$stmt = $mysqli->prepare($sql);
+$stmt->bind_param('iss', $vehicle_id, $to, $from);
+$stmt->execute();
+
+if ($stmt->get_result()->num_rows > 0) {
+    dieAlert("Vehicle already APPROVED for this period");
+}
+
+
+// -------- INSERT BOOKING --------
+
+$insert = "
+INSERT INTO bookings
+(user_id, vehicle_id, from_datetime, to_datetime,
+ pickup_location, drop_location, purpose, status)
+VALUES (?,?,?,?,?,?,?, 'PENDING')
+";
+
+$stmt = $mysqli->prepare($insert);
+$stmt->bind_param(
+        'iisssss',
+        $user_id,
+        $vehicle_id,
+        $from,
+        $to,
+        $pickup,
+        $drop,
+        $purpose
+);
+
+if ($stmt->execute()) {
+    successAlert("Booking request submitted");
+} else {
+    dieAlert("Booking failed");
+}
+
+
+
+// -------- HELPERS --------
+
+function dieAlert($msg) {
+    echo "<script>
+        alert('$msg');
+        window.location='usr-book-vehicle.php';
+    </script>";
+    exit;
+}
+
+function successAlert($msg) {
+    echo "<script>
+        alert('$msg');
+        window.location='user-dashboard.php';
+    </script>";
+    exit;
+}

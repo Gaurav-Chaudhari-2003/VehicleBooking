@@ -1,22 +1,40 @@
 <?php
 global $mysqli;
 session_start();
-include('vendor/inc/config.php');
-include('vendor/inc/checklogin.php');
-$aid = $_SESSION['u_id'] ?? null;
+include('../DATABASE FILE/config.php');
+include('../DATABASE FILE/checklogin.php');
 
-if ($aid) {
-    $userQuery = $mysqli->prepare("SELECT u_fname, u_lname, u_email, u_phone FROM tms_user WHERE u_id = ?");
-    $userQuery->bind_param('i', $aid);
-    $userQuery->execute();
-    $userResult = $userQuery->get_result();
-    $user = $userResult->fetch_object();
-} else {
-    $user = null;
+// Logout Logic
+if (isset($_GET['logout'])) {
+    $_SESSION = array();
+    if (ini_get("session.use_cookies")) {
+        $params = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000,
+            $params["path"], $params["domain"],
+            $params["secure"], $params["httponly"]
+        );
+    }
+    session_destroy();
+    header("Location: user-login.php");
+    exit;
 }
 
+// Check login status first
 check_login();
 $aid = $_SESSION['u_id'];
+
+// Fetch user data
+$user = null;
+if ($aid) {
+    $userQuery = $mysqli->prepare("SELECT first_name, last_name, email, phone FROM users WHERE id = ?");
+    if ($userQuery) {
+        $userQuery->bind_param('i', $aid);
+        $userQuery->execute();
+        $userResult = $userQuery->get_result();
+        $user = $userResult->fetch_object();
+    }
+}
+
 $baseURL = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/') . '/';
 $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
 ?>
@@ -105,8 +123,8 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
             <i class="fas fa-user-circle fa-2x text-primary"></i>
             <div class="text-start">
                 <?php if ($user): ?>
-                    <h6 class="mb-0 text-dark fw-semibold"><?php echo htmlspecialchars($user->u_fname . ' ' . $user->u_lname); ?></h6>
-                    <small class="text-muted"><?php echo htmlspecialchars($user->u_phone ?: $user->u_email); ?></small>
+                    <h6 class="mb-0 text-dark fw-semibold"><?php echo htmlspecialchars($user->first_name . ' ' . $user->last_name); ?></h6>
+                    <small class="text-muted"><?php echo htmlspecialchars($user->phone ?: $user->email); ?></small>
                 <?php else: ?>
                     <h6 class="mb-0 text-dark fw-semibold">User</h6>
                     <small class="text-muted">No info available</small>

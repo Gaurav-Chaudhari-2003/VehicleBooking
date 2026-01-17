@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 
-<?php include("vendor/inc/head.php");?>
 
 <body>
 
@@ -37,9 +36,6 @@
     <!-- /.row -->
   </div>
   <!-- /.container -->
-
-  <!-- Footer -->
-<?php include("vendor/inc/footer.php");?>
 
   <!-- Bootstrap core JavaScript -->
   <script src="vendor/jquery/jquery.min.js"></script>

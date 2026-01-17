@@ -1,5 +1,6 @@
 <?php
-include('vendor/inc/config.php');
+include('../DATABASE FILE/config.php');
+include('../DATABASE FILE/checklogin.php');
 
 session_start(); // Required to use $_SESSION for message passing
 
@@ -12,6 +13,7 @@ if (isset($_POST['add_user'])) {
     $u_pwd   = password_hash($_POST['u_pwd'], PASSWORD_DEFAULT);
     $u_category = 'User';
 
+    global $mysqli;
     $check = $mysqli->prepare("SELECT u_email FROM tms_pending_user WHERE u_email = ?");
     $check->bind_param('s', $u_email);
     $check->execute();

@@ -30,13 +30,16 @@ $vehicle_count = count_items('vehicles');
 // Fetch bookings
 $bookings = [];
 global $mysqli;
+// Updated query to match the new schema: bookings table
+// Columns: id, from_datetime, to_datetime, status, created_at
+// Joins: vehicles (id, name, reg_no), users (id, first_name, last_name, phone)
 if ($stmt = $mysqli->prepare("
-    SELECT b.booking_id, b.book_from_date, b.book_to_date, b.status, b.created_at,
+    SELECT b.id as booking_id, b.from_datetime, b.to_datetime, b.status, b.created_at,
            v.name as v_name, v.reg_no as v_reg_no, u.first_name as u_fname, u.last_name as u_lname, u.phone as u_phone
     FROM bookings b
     JOIN vehicles v ON b.vehicle_id = v.id
     JOIN users u ON b.user_id = u.id
-    ORDER BY b.book_from_date DESC
+    ORDER BY b.from_datetime DESC
 ")) {
     $stmt->execute();
     $res = $stmt->get_result();

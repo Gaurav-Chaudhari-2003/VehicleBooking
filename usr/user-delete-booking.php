@@ -1,7 +1,8 @@
 <?php
 global $mysqli;
 session_start();
-include('vendor/inc/config.php');
+include('../DATABASE FILE/config.php');
+include('../DATABASE FILE/checklogin.php');
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['delete_booking'])) {
     $booking_id = intval($_POST['booking_id']);

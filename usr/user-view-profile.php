@@ -1,13 +1,14 @@
 <?php
 global $mysqli;
 session_start();
-include('vendor/inc/config.php');
-include('vendor/inc/checklogin.php');
+include('../DATABASE FILE/config.php');
+include('../DATABASE FILE/checklogin.php');
 check_login();
 
 $aid = $_SESSION['u_id'];
 
-$query = "SELECT u_fname, u_lname, u_addr, u_phone, u_email FROM tms_user WHERE u_id = ?";
+// Updated query to match new schema: users table
+$query = "SELECT first_name, last_name, address, phone, email FROM users WHERE id = ?";
 $stmt = $mysqli->prepare($query);
 $stmt->bind_param('i', $aid);
 $stmt->execute();
@@ -23,7 +24,7 @@ $user = $result->fetch_object();
             <!-- User Info Header -->
             <div class="text-center mb-5">
                 <h3 class="text-dark font-weight-bold">
-                    <?php echo htmlspecialchars($user->u_fname . ' ' . $user->u_lname); ?>
+                    <?php echo htmlspecialchars($user->first_name . ' ' . $user->last_name); ?>
                 </h3>
             </div>
 
@@ -34,21 +35,21 @@ $user = $result->fetch_object();
                         <i class="fas fa-map-marker-alt me-2 text-muted"></i>
                         <strong>Address:</strong>
                     </div>
-                    <p class="text-muted"><?php echo htmlspecialchars($user->u_addr); ?></p>
+                    <p class="text-muted"><?php echo htmlspecialchars($user->address); ?></p>
                 </div>
                 <div class="col-md-6 mb-3">
                     <div class="d-flex align-items-center">
                         <i class="fas fa-phone me-2 text-muted"></i>
                         <strong>Contact:</strong>
                     </div>
-                    <p class="text-muted"><?php echo htmlspecialchars($user->u_phone); ?></p>
+                    <p class="text-muted"><?php echo htmlspecialchars($user->phone); ?></p>
                 </div>
                 <div class="col-md-6 mb-3">
                     <div class="d-flex align-items-center">
                         <i class="fas fa-envelope me-2 text-muted"></i>
                         <strong>Email:</strong>
                     </div>
-                    <p class="text-muted"><?php echo htmlspecialchars($user->u_email); ?></p>
+                    <p class="text-muted"><?php echo htmlspecialchars($user->email); ?></p>
                 </div>
             </div>
 
@@ -83,34 +84,11 @@ $user = $result->fetch_object();
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <a href="user-logout.php" class="btn btn-danger">Logout</a>
+                    <a href="user-dashboard.php?logout=true" class="btn btn-danger">Logout</a>
                 </div>
             </div>
         </div>
     </div>
-
-
-<!-- Bootstrap Logout Modal -->
-<div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-warning">
-                <h5 class="modal-title text-dark" id="logoutModalLabel">
-                    <i class="fas fa-sign-out-alt me-2"></i>Confirm Logout
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center">
-                <p class="text-gray-700 mb-3">Are you sure you want to log out from your account?</p>
-                <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <a href="user-logout.php" class="btn btn-danger">Logout</a>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- Ensure Bootstrap JS is loaded -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

@@ -1,7 +1,7 @@
 <?php
 session_start();
-include('vendor/inc/config.php');
-include('vendor/inc/checklogin.php');
+include('../DATABASE FILE/config.php');
+include('../DATABASE FILE/checklogin.php');
 check_login();
 $u_id = $_SESSION['u_id'];
 
@@ -14,6 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $confirm_pwd = $_POST['confirm_pwd'];
 
     // Fetch plain text password
+    global $mysqli;
     $stmt = $mysqli->prepare("SELECT u_pwd FROM tms_user WHERE u_id=?");
     $stmt->bind_param("i", $u_id);
     $stmt->execute();

@@ -1,7 +1,7 @@
 <?php
 session_start();
-include('vendor/inc/config.php');
-include('vendor/inc/checklogin.php');
+include('../DATABASE FILE/config.php');
+include('../DATABASE FILE/checklogin.php');
 check_login();
 
 $aid = $_SESSION['u_id'];
@@ -11,7 +11,6 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <?php include("vendor/inc/head.php"); ?>
 
     <!-- Bootstrap 5.3 & Font Awesome 6.4 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -49,15 +48,16 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
     <!-- Booking Cards -->
     <div class="row" id="bookingCards">
         <?php
+        // Updated query to match new schema: bookings, vehicles, users tables
         $query = "
-            SELECT b.booking_id, b.book_from_date, b.book_to_date, b.status, b.created_at, b.remarks, b.admin_remarks,
-               v.v_name, v.v_dpic, 
-               u.u_fname, u.u_lname, u.u_phone, u.u_car_type, u.u_car_regno
-            FROM tms_booking b 
-            JOIN tms_vehicle v ON b.vehicle_id = v.v_id
-            JOIN tms_user u ON b.user_id = u.u_id
-            WHERE u.u_id = ?
-
+            SELECT b.id as booking_id, b.from_datetime, b.to_datetime, b.status, b.created_at, b.purpose,
+               v.name as v_name, v.image as v_dpic, 
+               u.first_name, u.last_name, u.phone
+            FROM bookings b 
+            JOIN vehicles v ON b.vehicle_id = v.id
+            JOIN users u ON b.user_id = u.id
+            WHERE u.id = ?
+            ORDER BY b.created_at DESC
         ";
 
         $stmt = $mysqli->prepare($query);
@@ -68,6 +68,11 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
         if ($res->num_rows > 0) {
             while ($row = $res->fetch_object()) {
                 $imagePath = $projectFolder . 'vendor/img/' . ($row->v_dpic ?: 'placeholder.png');
+                
+                // Format Dates
+                $createdDate = date('d M Y - h:i A', strtotime($row->created_at));
+                $fromDate = date('d M Y', strtotime($row->from_datetime));
+                $toDate = date('d M Y', strtotime($row->to_datetime));
                 ?>
                 <div class="col-md-4 mb-4 vehicle-card">
                     <div class="card h-100">
@@ -76,15 +81,15 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
                         <div class="card-body">
                             <h5 class="card-title"><?= "$row->v_name" ?></h5>
                             <p class="mb-1"><strong>Booking Id:</strong> <?= $row->booking_id ?></p>
-                            <p class="mb-1"><strong>Booking Created Date:</strong> <?= $row->created_at ?></p>
-                            <p class="mb-1"><strong>From Date:</strong> <?= $row->book_from_date ?></p>
-                            <p class="mb-1"><strong>To Date:</strong> <?= $row->book_to_date ?></p>
+                            <p class="mb-1"><strong>Booking Created Date:</strong> <?= $createdDate ?></p>
+                            <p class="mb-1"><strong>From:</strong> <?= $fromDate ?></p>
+                            <p class="mb-1"><strong>To:</strong> <?= $toDate ?></p>
                             <?php
-                                $fullRemarks = htmlspecialchars($row->remarks);
+                                $fullRemarks = htmlspecialchars($row->purpose);
                                 $shortRemarks = strlen($fullRemarks) > 20 ? substr($fullRemarks, 0, 20) . '...' : $fullRemarks;
                                 ?>
                                 <p class="mb-1">
-                                    <strong>Message:</strong>
+                                    <strong>Purpose:</strong>
                                     <span class="remarks-text" data-full="<?= $fullRemarks ?>">
                                 <?= $shortRemarks ?>
                                         <?php if (strlen($fullRemarks) > 20): ?>
@@ -93,27 +98,24 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
                                 </span>
                             </p>
 
-                            <?php if (!empty($row->admin_remarks)): ?>
-                                <p class="mb-1">
-                                    <strong>Admin Remark:</strong> <?= htmlspecialchars($row->admin_remarks); ?>
-                                </p>
-                            <?php endif; ?>
-
-
                         </div>
                         <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
                             <div>
                                 <strong>Status:</strong>
-                                <?php if ($row->status == "Pending"): ?>
+                                <?php if ($row->status == "PENDING"): ?>
                                     <span class="badge bg-warning text-dark">Pending</span>
-                                <?php elseif ($row->status == "Approved"): ?>
+                                <?php elseif ($row->status == "APPROVED"): ?>
                                     <span class="badge bg-success">Approved</span>
+                                <?php elseif ($row->status == "REJECTED"): ?>
+                                    <span class="badge bg-danger">Rejected</span>
+                                <?php elseif ($row->status == "CANCELLED"): ?>
+                                    <span class="badge bg-secondary">Cancelled</span>
                                 <?php else: ?>
-                                    <span class="badge bg-danger"><?= $row->status ?></span>
+                                    <span class="badge bg-info"><?= $row->status ?></span>
                                 <?php endif; ?>
                             </div>
 
-                            <?php if ($row->status == 'Pending'): ?>
+                            <?php if ($row->status == 'PENDING'): ?>
                                 <a href="#" class="btn btn-sm btn-danger cancel-booking-btn" data-booking-id="<?= $row->booking_id ?>">
                                     <i class="fas fa-times-circle"></i> Cancel Booking
                                 </a>

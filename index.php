@@ -1,6 +1,6 @@
 <?php
 session_start();
-include('admin/vendor/inc/config.php');
+include('DATABASE FILE/config.php');
 ?>
 <!DOCTYPE html>
 <html lang="en">

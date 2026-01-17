@@ -1,7 +1,7 @@
 <?php
   session_start();
-  include('vendor/inc/config.php');
-  include('vendor/inc/checklogin.php');
+include('../DATABASE FILE/config.php');
+include('../DATABASE FILE/checklogin.php');
   check_login();
   $aid=$_SESSION['u_id'];
   //Add USer
@@ -11,6 +11,7 @@
             $f_uname=$_POST['f_uname'];
             $f_content = $_POST['f_content'];
             $query="insert into tms_feedback (f_uname, f_content) values(?,?)";
+            global $mysqli;
             $stmt = $mysqli->prepare($query);
             $rc=$stmt->bind_param('ss', $f_uname, $f_content);
             $stmt->execute();
@@ -83,6 +84,7 @@
             <?php
                 $aid=$_SESSION['u_id'];
                 $ret="select * from tms_user where u_id=?";
+                global $mysqli;
                 $stmt= $mysqli->prepare($ret) ;
                 $stmt->bind_param('i',$aid);
                 $stmt->execute() ;//ok
