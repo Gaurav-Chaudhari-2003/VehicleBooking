@@ -5,7 +5,16 @@ session_start();
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['logout'])) {
     session_unset();
     session_destroy();
-    header("Location: ../index.php");
+    
+    // Prevent caching
+    header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+    header("Cache-Control: post-check=0, pre-check=0", false);
+    header("Pragma: no-cache");
+    
+    // Use JS to replace history and redirect
+    echo '<script type="text/javascript">';
+    echo 'window.location.replace("../index.php");';
+    echo '</script>';
     exit;
 }
 
@@ -14,6 +23,11 @@ require_once 'vendor/inc/config.php';
 require_once 'vendor/inc/checklogin.php';
 check_login();
 $aid = $_SESSION['a_id'] ?? null;
+
+// Prevent caching to ensure back button doesn't show stale page
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
 
 // Redirect if not logged in
 if (!$aid) {
@@ -24,10 +38,14 @@ if (!$aid) {
 // Fetch admin profile
 $admin = null;
 global $mysqli;
-if ($stmt = $mysqli->prepare("SELECT a_name, a_email FROM tms_admin WHERE a_id = ?")) {
+// Updated to use 'users' table as per new schema
+if ($stmt = $mysqli->prepare("SELECT first_name, last_name, email FROM users WHERE id = ?")) {
     $stmt->bind_param("i", $aid);
     $stmt->execute();
-    $admin = $stmt->get_result()->fetch_object();
+    global $first_name, $last_name, $email;
+    $stmt->bind_result($first_name, $last_name, $email);
+    $stmt->fetch();
+    $admin = (object) ['a_name' => $first_name . ' ' . $last_name, 'a_email' => $email];
     $stmt->close();
 }
 
@@ -45,9 +63,9 @@ function count_items($table, $where = null, $param = null) {
     return $count;
 }
 
-$user_count = count_items('tms_user', 'u_category', 'User');
-$driver_count = count_items('tms_user', 'u_category', 'Driver');
-$vehicle_count = count_items('tms_vehicle');
+// Updated counts based on new schema roles
+$user_count = count_items('users', 'is_active', 1); // Assuming 'User' maps to 'EMPLOYEE' or similar in new schema
+$vehicle_count = count_items('vehicles'); // Table name changed to 'vehicles'
 
 date_default_timezone_set("Asia/Kolkata");
 ?>
@@ -93,6 +111,13 @@ date_default_timezone_set("Asia/Kolkata");
             cursor: pointer;
         }
     </style>
+    <script>
+        // Force browser back button to redirect to project homepage
+        history.pushState(null, null, location.href);
+        window.onpopstate = function () {
+            window.location.replace("../index.php");
+        };
+    </script>
 </head>
 <body>
 <div class="container py-4">
@@ -229,17 +254,16 @@ date_default_timezone_set("Asia/Kolkata");
         <?php
         $cards = [
             ['id' => 'user-count', 'count' => $user_count, 'title' => 'Users', 'icon' => 'fas fa-users', 'color' => 'primary', 'link' => 'admin-view-user.php'],
-            ['id' => 'driver-count', 'count' => $driver_count, 'title' => 'Drivers', 'icon' => 'fas fa-id-card', 'color' => 'success', 'link' => 'admin-view-driver.php'],
             ['id' => 'vehicle-count', 'count' => $vehicle_count, 'title' => 'Vehicles', 'icon' => 'fas fa-bus', 'color' => 'warning', 'link' => 'admin-view-vehicle.php'],
         ];
         foreach ($cards as $card):
             ?>
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <div class="card text-center hover-translate shadow-sm">
                     <div class="card-body">
                         <i class="<?= $card['icon']; ?> fa-3x text-<?= $card['color']; ?> mb-3"></i>
                         <h5 class="card-title" id="<?= $card['id']; ?>"><?= $card['count'] . " " . $card['title']; ?></h5>
-                        <a href="<?= $card['link']; ?>" class="btn btn-outline-<?= $card['color']; ?> btn-sm mt-2">View Details</a>
+                        <a href="javascript:void(0);" onclick="window.location.replace('<?= $card['link']; ?>')" class="btn btn-outline-<?= $card['color']; ?> btn-sm mt-2">View Details</a>
                     </div>
                 </div>
             </div>
@@ -316,9 +340,9 @@ date_default_timezone_set("Asia/Kolkata");
                         
                         let actions = '';
                         if (row.status === 'Pending') {
-                            actions += `<a href="admin-approve-booking.php?booking_id=${row.booking_id}" class="btn btn-success btn-sm"><i class="fa fa-check"></i></a> `;
+                            actions += `<a href="javascript:void(0);" onclick="window.location.replace('admin-approve-booking.php?booking_id=${row.booking_id}')" class="btn btn-success btn-sm"><i class="fa fa-check"></i></a> `;
                         }
-                        actions += `<a href="admin-delete-booking.php?booking_id=${row.booking_id}" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i></a>`;
+                        actions += `<a href="javascript:void(0);" onclick="window.location.replace('admin-delete-booking.php?booking_id=${row.booking_id}')" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i></a>`;
 
                         const fromDate = new Date(row.book_from_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
                         const toDate = new Date(row.book_to_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });

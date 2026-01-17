@@ -3,6 +3,19 @@ global $mysqli;
 session_start();
 include('vendor/inc/config.php'); // Load DB config
 
+// Prevent caching to ensure back button doesn't show stale page
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+
+// If user is already logged in, redirect to dashboard immediately
+if (isset($_SESSION['u_id'])) {
+    echo '<script type="text/javascript">';
+    echo 'window.location.replace("user-dashboard.php");';
+    echo '</script>';
+    exit();
+}
+
 $error = '';
 
 if (isset($_POST['Usr-login'])) {
@@ -10,7 +23,8 @@ if (isset($_POST['Usr-login'])) {
     $u_pwd = $_POST['u_pwd'];
 
     // Secure login query using prepared statements
-    $stmt = $mysqli->prepare("SELECT u_id, u_pwd FROM tms_user WHERE u_email = ?");
+    // Updated to use 'users' table as per new schema
+    $stmt = $mysqli->prepare("SELECT id, password FROM users WHERE email = ? AND role = 'EMPLOYEE' AND is_active = 1");
     $stmt->bind_param("s", $u_email);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -18,19 +32,23 @@ if (isset($_POST['Usr-login'])) {
     if ($user = $result->fetch_assoc()) {
         // Verify the password hash
         // Check if the password is hashed or plain text (for legacy support)
-        if (password_verify($u_pwd, $user['u_pwd']) || $u_pwd === $user['u_pwd']) {
-            $_SESSION['u_id'] = $user['u_id'];
+        if (password_verify($u_pwd, $user['password']) || $u_pwd === $user['password']) {
+            $_SESSION['u_id'] = $user['id'];
 
             // Log user login with IP
             $ip = $_SERVER['REMOTE_ADDR'];
-            $city = 'N/A';
-            $country = 'N/A';
+            $user_agent = $_SERVER['HTTP_USER_AGENT'];
+            $action = "User Login";
 
-            $log_stmt = $mysqli->prepare("INSERT INTO userLog(u_id, u_email, u_ip, u_city, u_country) VALUES (?, ?, ?, ?, ?)");
-            $log_stmt->bind_param("issss", $user['u_id'], $u_email, $ip, $city, $country);
+            // Updated to use 'system_logs' table as per new schema
+            $log_stmt = $mysqli->prepare("INSERT INTO system_logs(user_id, action, ip, user_agent) VALUES (?, ?, ?, ?)");
+            $log_stmt->bind_param("isss", $user['id'], $action, $ip, $user_agent);
             $log_stmt->execute();
 
-            header("Location: user-dashboard.php");
+            // Use JS to replace history and redirect
+            echo '<script type="text/javascript">';
+            echo 'window.location.replace("user-dashboard.php");';
+            echo '</script>';
             exit();
         } else {
             $error = "Invalid email or password.";
@@ -51,12 +69,21 @@ if (isset($_POST['Usr-login'])) {
     <title>Vehicle Booking System - Client Login</title>
     <link href="vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
     <link href="vendor/css/sb-admin.css" rel="stylesheet">
+    <script>
+        // Prevent back button from showing this page if coming from dashboard
+        if (window.history.replaceState) {
+            window.history.replaceState(null, null, window.location.href);
+        }
+    </script>
 </head>
 
 <body class="bg-dark">
 <div class="container">
     <div class="card card-login mx-auto mt-5">
-        <div class="card-header">Client Login Panel</div>
+        <div class="card-header d-flex align-items-center">
+            <a href="javascript:void(0);" onclick="window.location.replace('../index.php')" class="btn btn-light btn-sm mr-3 text-primary font-weight-bold"><i class="fas fa-arrow-left"></i> Back</a>
+            <div class="flex-grow-1 text-center" style="margin-right: 60px;">Client Login Panel</div>
+        </div>
         <div class="card-body">
 
             <?php if (!empty($error)): ?>

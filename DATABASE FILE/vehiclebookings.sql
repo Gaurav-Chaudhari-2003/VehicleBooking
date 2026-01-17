@@ -1,285 +1,278 @@
--- phpMyAdmin SQL Dump
--- version 4.6.5.2
--- https://www.phpmyadmin.net/
---
--- Host: 127.0.0.1
--- Generation Time: Sep 14, 2022 at 07:55 PM
--- Server version: 5.6.21
--- PHP Version: 5.6.3
+CREATE DATABASE IF NOT EXISTS vehicle_booking;
+USE vehicle_booking;
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET time_zone = "+00:00";
+SET NAMES utf8mb4;
 
+-- ========================================
+-- 1. USERS & AUTH
+-- ========================================
 
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8mb4 */;
+CREATE TABLE users (
+                       id INT AUTO_INCREMENT PRIMARY KEY,
 
---
--- Database: `vehiclebookings`
---
+                       first_name VARCHAR(100) NOT NULL,
+                       last_name  VARCHAR(100) NOT NULL,
 
--- --------------------------------------------------------
+                       email VARCHAR(150) NOT NULL UNIQUE,
+                       phone VARCHAR(15) NOT NULL,
 
---
--- Table structure for table `tms_admin`
---
+                       address TEXT,
 
-CREATE TABLE `tms_admin` (
-  `a_id` int(20) NOT NULL,
-  `a_name` varchar(200) NOT NULL,
-  `a_email` varchar(200) NOT NULL,
-  `a_pwd` varchar(200) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+                       role ENUM('ADMIN','MANAGER','DRIVER','EMPLOYEE')
+                                            DEFAULT 'EMPLOYEE',
 
---
--- Dumping data for table `tms_admin`
---
+                       password VARCHAR(255) NOT NULL,
 
-INSERT INTO `tms_admin` (`a_id`, `a_name`, `a_email`, `a_pwd`) VALUES
-(1, 'System Admin', 'admin@mail.com', 'codeastro.com');
+                       is_active BOOLEAN DEFAULT 1,
 
--- --------------------------------------------------------
-
---
--- Table structure for table `tms_feedback`
---
-
-CREATE TABLE `tms_feedback` (
-  `f_id` int(20) NOT NULL,
-  `f_uname` varchar(200) NOT NULL,
-  `f_content` longtext NOT NULL,
-  `f_status` varchar(200) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
---
--- Dumping data for table `tms_feedback`
---
-
-INSERT INTO `tms_feedback` (`f_id`, `f_uname`, `f_content`, `f_status`) VALUES
-(1, 'Elliot Gape', 'This is a demo feedback text. This is a demo feedback text. This is a demo feedback text.', 'Published'),
-(2, 'Mark L. Anderson', 'Sample Feedback Text for testing! Sample Feedback Text for testing! Sample Feedback Text for testing!', 'Published'),
-(3, 'Liam Moore ', 'test number 3', '');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `tms_pwd_resets`
---
-
-CREATE TABLE `tms_pwd_resets` (
-  `r_id` int(20) NOT NULL,
-  `r_email` varchar(200) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
---
--- Dumping data for table `tms_pwd_resets`
---
-
-INSERT INTO `tms_pwd_resets` (`r_id`, `r_email`) VALUES
-(2, 'admin@mail.com');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `tms_syslogs`
---
-
-CREATE TABLE `tms_syslogs` (
-  `l_id` int(20) NOT NULL,
-  `u_id` varchar(200) NOT NULL,
-  `u_email` varchar(200) NOT NULL,
-  `u_ip` varbinary(200) NOT NULL,
-  `u_city` varchar(200) NOT NULL,
-  `u_country` varchar(200) NOT NULL,
-  `u_logintime` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `tms_user`
---
-
-CREATE TABLE `tms_user` (
-  `u_id` int(20) NOT NULL,
-  `u_fname` varchar(200) NOT NULL,
-  `u_lname` varchar(200) NOT NULL,
-  `u_phone` varchar(200) NOT NULL,
-  `u_addr` varchar(200) NOT NULL,
-  `u_category` varchar(200) NOT NULL,
-  `u_email` varchar(200) NOT NULL,
-  `u_pwd` varchar(20) NOT NULL,
-  `u_car_type` varchar(200) NOT NULL,
-  `u_car_regno` varchar(200) NOT NULL,
-  `u_car_bookdate` varchar(200) NOT NULL,
-  `u_car_book_status` varchar(200) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
---
--- Dumping data for table `tms_user`
---
-
-INSERT INTO `tms_user` (`u_id`, `u_fname`, `u_lname`, `u_phone`, `u_addr`, `u_category`, `u_email`, `u_pwd`, `u_car_type`, `u_car_regno`, `u_car_bookdate`, `u_car_book_status`) VALUES
-(3, 'Demo', 'User', '070678909', '90100 Machakos ', 'Driver', 'demouser@tms.com', 'demo123', 'SUV', 'CA1001', '2022-09-01', 'Approved'),
-(4, 'John', 'Settles', '7145698540', '45 Clearview Drive', 'Driver', 'johns@mail.com', 'password', '', '', '', ''),
-(5, 'Joseph', 'Yung', '7896587777', '72 Doe Meadow Drive', 'Driver', 'joseph@mail.com', 'password', '', '', '', ''),
-(6, 'Vincent', 'Pelletier', '4580001456', '58 Farland Avenue', 'Driver', 'vincentp@mail.com', 'password', '', '', '', ''),
-(7, 'Jesse', 'Robinson', '1458887855', '73 Fleming Way', 'Driver', 'jesser@mail.com', 'password', '', '', '', ''),
-(8, 'Nelson', 'Ford', '7458965874', '58 West Side Avenue', 'User', 'nelford@mail.com', 'password', 'Sedan', 'CA1690', '2022-09-13', 'Approved'),
-(9, 'Paul', 'Mills', '7412563258', '12 Red Maple Drive', 'User', 'paul@mail.com', 'password', 'Sedan', 'CA2077', '2022-09-14', 'Pending'),
-(10, 'Liam', 'Moore', '7410001212', '114 Bleck Street', 'User', 'liamoore@mail.com', 'password', 'Sedan', 'CA1690', '2022-09-14', 'Approved'),
-(11, 'Jeff', 'Lewis', '7854545454', '114 Test Adr', 'User', 'jeff@mail.com', 'password', 'Sedan', 'CA7700', '2022-09-14', 'Pending'),
-(12, 'Kenya', 'Norman', '7896547855', '114 Test Addr', 'User', 'normank@mail.com', 'password', 'Bus', 'CA7766', '2022-09-15', 'Pending');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `tms_vehicle`
---
-
-CREATE TABLE `tms_vehicle` (
-  `v_id` int(20) NOT NULL,
-  `v_name` varchar(200) NOT NULL,
-  `v_reg_no` varchar(200) NOT NULL,
-  `v_pass_no` varchar(200) NOT NULL,
-  `v_driver` varchar(200) NOT NULL,
-  `v_category` varchar(200) NOT NULL,
-  `v_dpic` varchar(200) NOT NULL,
-  `v_status` varchar(200) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
---
--- Dumping data for table `tms_vehicle`
---
-
-INSERT INTO `tms_vehicle` (`v_id`, `v_name`, `v_reg_no`, `v_pass_no`, `v_driver`, `v_category`, `v_dpic`, `v_status`) VALUES
-(3, 'Euro Bond', 'CA7766', '50', 'Vincent Pelletier', 'Bus', 'buscch.jpg', 'Available'),
-(4, 'Honda Accord', 'CA2077', '5', 'Joseph Yung', 'Sedan', '2019_honda_accord_angularfront.jpg', 'Available'),
-(5, 'Volkswagen Passat', 'CA1690', '5', 'Jesse Robinson', 'Sedan', 'volkswagen-passat-500.jpg', 'Available'),
-(6, 'Nissan Rogue', 'CA1001', '7', 'Demo User', 'SUV', 'Nissan_Rogue_SV_2021.jpg', 'Available'),
-(7, 'Subaru Legacy', 'CA7700', '5', 'John Settles', 'Sedan', 'Subaru_Legacy_Premium_2022_2.jpg', 'Available');
-
---
--- Indexes for dumped tables
---
-
-
-CREATE TABLE `userlog` (
-                           `log_id` INT(20) NOT NULL AUTO_INCREMENT,
-                           `u_id` INT(20) NOT NULL,
-                           `u_email` VARCHAR(200) NOT NULL,
-                           `u_ip` VARCHAR(200) NOT NULL,
-                           `u_city` VARCHAR(200) NOT NULL,
-                           `u_country` VARCHAR(200) NOT NULL,
-                           `log_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                           PRIMARY KEY (`log_id`)
-)ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
-
-
---
--- Indexes for table `tms_admin`
---
-ALTER TABLE `tms_admin`
-  ADD PRIMARY KEY (`a_id`);
-
---
--- Indexes for table `tms_feedback`
---
-ALTER TABLE `tms_feedback`
-  ADD PRIMARY KEY (`f_id`);
-
---
--- Indexes for table `tms_pwd_resets`
---
-ALTER TABLE `tms_pwd_resets`
-  ADD PRIMARY KEY (`r_id`);
-
---
--- Indexes for table `tms_syslogs`
---
-ALTER TABLE `tms_syslogs`
-  ADD PRIMARY KEY (`l_id`);
-
---
--- Indexes for table `tms_user`
---
-ALTER TABLE `tms_user`
-  ADD PRIMARY KEY (`u_id`);
-
---
--- Indexes for table `tms_vehicle`
---
-ALTER TABLE `tms_vehicle`
-  ADD PRIMARY KEY (`v_id`);
-
---
--- AUTO_INCREMENT for dumped tables
---
-
---
--- AUTO_INCREMENT for table `tms_admin`
---
-ALTER TABLE `tms_admin`
-  MODIFY `a_id` int(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
---
--- AUTO_INCREMENT for table `tms_feedback`
---
-ALTER TABLE `tms_feedback`
-  MODIFY `f_id` int(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
---
--- AUTO_INCREMENT for table `tms_pwd_resets`
---
-ALTER TABLE `tms_pwd_resets`
-  MODIFY `r_id` int(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
---
--- AUTO_INCREMENT for table `tms_syslogs`
---
-ALTER TABLE `tms_syslogs`
-  MODIFY `l_id` int(20) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `tms_user`
---
-ALTER TABLE `tms_user`
-  MODIFY `u_id` int(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
---
--- AUTO_INCREMENT for table `tms_vehicle`
---
-ALTER TABLE `tms_vehicle`
-  MODIFY `v_id` int(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
-
-
-
-
-CREATE TABLE `tms_booking` (
-    `booking_id` INT AUTO_INCREMENT PRIMARY KEY,
-    `user_id` INT NOT NULL,
-    `vehicle_id` INT NOT NULL,
-    `book_from_date` DATE NOT NULL,
-    `book_to_date` DATE NOT NULL,
-    `status` ENUM('Pending', 'Approved', 'Cancelled', 'Completed', 'Rejected') DEFAULT 'Pending',
-    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (`user_id`) REFERENCES `tms_user`(`u_id`),
-    FOREIGN KEY (`vehicle_id`) REFERENCES `tms_vehicle`(`v_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
-CREATE TABLE tms_pending_user (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    u_fname VARCHAR(255),
-    u_lname VARCHAR(255),
-    u_phone VARCHAR(20),
-    u_addr TEXT,
-    u_category VARCHAR(50),
-    u_email VARCHAR(255) UNIQUE,
-    u_pwd VARCHAR(255),
-    request_time DATETIME DEFAULT CURRENT_TIMESTAMP
+                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                       updated_at TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP
 );
 
-ALTER TABLE tms_booking ADD COLUMN remarks TEXT;
+-- ========================================
+-- 2. VEHICLES
+-- ========================================
 
-ALTER TABLE tms_booking ADD COLUMN admin_remarks TEXT;
+CREATE TABLE vehicles (
+                          id INT AUTO_INCREMENT PRIMARY KEY,
+
+                          name VARCHAR(120) NOT NULL,
+                          reg_no VARCHAR(50) NOT NULL UNIQUE,
+
+                          category ENUM('SEDAN','SUV','BUS','TRUCK','VAN') NOT NULL,
+
+                          fuel_type ENUM('PETROL','DIESEL','CNG','ELECTRIC'),
+
+                          capacity INT NOT NULL,
+
+                          status ENUM(
+                              'AVAILABLE',
+                              'IN_SERVICE',
+                              'MAINTENANCE',
+                              'RETIRED'
+                              ) DEFAULT 'AVAILABLE',
+
+                          image VARCHAR(255),
+
+                          last_remark_id INT NULL,
+
+                          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ========================================
+-- 3. DRIVERS
+-- ========================================
+
+CREATE TABLE drivers (
+                         id INT AUTO_INCREMENT PRIMARY KEY,
+
+                         user_id INT NOT NULL,
+
+                         license_no VARCHAR(50) UNIQUE,
+                         license_expiry DATE,
+
+                         experience_years INT,
+
+                         status ENUM('ACTIVE','ON_LEAVE','INACTIVE')
+                             DEFAULT 'ACTIVE',
+
+                         last_remark_id INT NULL,
+
+                         FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- ========================================
+-- 4. BOOKINGS
+-- ========================================
+
+CREATE TABLE bookings (
+                          id INT AUTO_INCREMENT PRIMARY KEY,
+
+                          user_id INT NOT NULL,
+                          vehicle_id INT NOT NULL,
+                          driver_id INT NULL,
+
+                          from_datetime DATETIME NOT NULL,
+                          to_datetime   DATETIME NOT NULL,
+
+                          pickup_location VARCHAR(200) NOT NULL,
+                          drop_location   VARCHAR(200) NOT NULL,
+
+                          purpose TEXT,
+
+                          status ENUM(
+                              'PENDING',
+                              'APPROVED',
+                              'REJECTED',
+                              'ONGOING',
+                              'COMPLETED',
+                              'CANCELLED'
+                              ) DEFAULT 'PENDING',
+
+                          last_remark_id INT NULL,
+
+                          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                          updated_at TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
+
+                          FOREIGN KEY (user_id) REFERENCES users(id),
+                          FOREIGN KEY (vehicle_id) REFERENCES vehicles(id),
+                          FOREIGN KEY (driver_id) REFERENCES drivers(id)
+);
+
+-- ========================================
+-- 5. CENTRAL REMARK SYSTEM
+-- ========================================
+
+CREATE TABLE entity_remarks (
+                                id INT AUTO_INCREMENT PRIMARY KEY,
+
+                                entity_type ENUM(
+                                    'BOOKING',
+                                    'VEHICLE',
+                                    'USER',
+                                    'DRIVER',
+                                    'MAINTENANCE'
+                                    ) NOT NULL,
+
+                                entity_id INT NOT NULL,
+
+                                user_id INT NOT NULL,
+
+                                remark TEXT NOT NULL,
+
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+                                FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- ========================================
+-- 6. OPERATION HISTORY (AUDIT TRAIL)
+-- ========================================
+
+CREATE TABLE operation_history (
+                                   id INT AUTO_INCREMENT PRIMARY KEY,
+
+                                   entity_type ENUM(
+                                       'BOOKING',
+                                       'VEHICLE',
+                                       'USER',
+                                       'DRIVER',
+                                       'MAINTENANCE'
+                                       ),
+
+                                   entity_id INT,
+
+                                   action VARCHAR(100),
+
+                                   performed_by INT,
+
+                                   remark TEXT,
+
+                                   performed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+                                   FOREIGN KEY (performed_by) REFERENCES users(id)
+);
+
+-- ========================================
+-- 7. BOOKING CONFLICTS
+-- ========================================
+
+CREATE TABLE booking_conflicts (
+                                   id INT AUTO_INCREMENT PRIMARY KEY,
+
+                                   booking_id INT,
+
+                                   conflict_reason VARCHAR(255),
+
+                                   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+                                   FOREIGN KEY (booking_id) REFERENCES bookings(id)
+);
+
+-- ========================================
+-- 8. MAINTENANCE
+-- ========================================
+
+CREATE TABLE vehicle_maintenance (
+                                     id INT AUTO_INCREMENT PRIMARY KEY,
+
+                                     vehicle_id INT,
+
+                                     service_date DATE,
+                                     next_service DATE,
+
+                                     description TEXT,
+                                     cost DECIMAL(10,2),
+
+                                     status ENUM('OPEN','DONE') DEFAULT 'OPEN',
+
+                                     last_remark_id INT NULL,
+
+                                     FOREIGN KEY (vehicle_id) REFERENCES vehicles(id)
+);
+
+-- ========================================
+-- 9. SYSTEM LOGS
+-- ========================================
+
+CREATE TABLE system_logs (
+                             id INT AUTO_INCREMENT PRIMARY KEY,
+
+                             user_id INT,
+                             action VARCHAR(150),
+
+                             ip VARCHAR(50),
+                             user_agent VARCHAR(255),
+
+                             log_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+                             FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- ========================================
+-- 10. FEEDBACK
+-- ========================================
+
+CREATE TABLE feedback (
+                          id INT AUTO_INCREMENT PRIMARY KEY,
+
+                          user_id INT,
+                          content TEXT,
+
+                          status ENUM('PUBLISHED','HIDDEN')
+                                               DEFAULT 'PUBLISHED',
+
+                          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+                          FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- ========================================
+-- 11. VEHICLE SCHEDULE
+-- ========================================
+
+CREATE TABLE vehicle_schedule (
+                                  id INT AUTO_INCREMENT PRIMARY KEY,
+
+                                  vehicle_id INT,
+                                  date DATE,
+
+                                  is_available BOOLEAN DEFAULT 1,
+
+                                  FOREIGN KEY (vehicle_id) REFERENCES vehicles(id)
+);
+
+-- ========================================
+-- 12. INDEXES
+-- ========================================
+
+CREATE INDEX idx_booking_dates
+    ON bookings(from_datetime, to_datetime);
+
+CREATE INDEX idx_vehicle_status
+    ON vehicles(status);
+
+CREATE INDEX idx_user_email
+    ON users(email);
