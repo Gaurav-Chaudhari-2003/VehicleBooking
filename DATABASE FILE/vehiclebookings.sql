@@ -267,7 +267,37 @@ CREATE TABLE vehicle_schedule (
 );
 
 -- ========================================
--- 12. INDEXES
+-- 12. VENDORS
+-- ========================================
+
+CREATE TABLE vendors (
+                         id INT AUTO_INCREMENT PRIMARY KEY,
+                         name VARCHAR(150) NOT NULL,
+                         phone VARCHAR(20),
+                         email VARCHAR(150),
+                         address TEXT,
+                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ========================================
+-- 13. VEHICLE CONTRACTS
+-- ========================================
+
+CREATE TABLE vehicle_contracts (
+                                   id INT AUTO_INCREMENT PRIMARY KEY,
+                                   vehicle_id INT NOT NULL,
+                                   vendor_id INT NOT NULL,
+                                   contract_start_date DATE NOT NULL,
+                                   contract_end_date DATE NOT NULL,
+                                   contract_budget DECIMAL(10, 2),
+                                   contract_status ENUM('ACTIVE', 'EXPIRED', 'TERMINATED') DEFAULT 'ACTIVE',
+                                   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                   FOREIGN KEY (vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE,
+                                   FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE CASCADE
+);
+
+-- ========================================
+-- 14. INDEXES
 -- ========================================
 
 CREATE INDEX idx_booking_dates
@@ -278,32 +308,3 @@ CREATE INDEX idx_vehicle_status
 
 CREATE INDEX idx_user_email
     ON users(email);
-
-
--- 1. Create the Vendors table
-CREATE TABLE IF NOT EXISTS vendors (
-                                       id INT AUTO_INCREMENT PRIMARY KEY,
-                                       name VARCHAR(150) NOT NULL,
-                                       phone VARCHAR(20),
-                                       email VARCHAR(150),
-                                       address TEXT,
-                                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- 2. Create the Contracts table (linking vendors to vehicles or general contracts)
-CREATE TABLE IF NOT EXISTS vehicle_contracts (
-                                                 id INT AUTO_INCREMENT PRIMARY KEY,
-                                                 vehicle_id INT NOT NULL,
-                                                 vendor_id INT NOT NULL,
-                                                 contract_start_date DATE NOT NULL,
-                                                 contract_end_date DATE NOT NULL,
-                                                 contract_budget DECIMAL(10, 2),
-                                                 contract_status ENUM('ACTIVE', 'EXPIRED', 'TERMINATED') DEFAULT 'ACTIVE',
-                                                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                                                 FOREIGN KEY (vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE,
-                                                 FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE CASCADE
-);
-
--- 3. Update the Vehicles table to indicate the ownership type
-ALTER TABLE vehicles
-    ADD COLUMN ownership_type ENUM('DEPARTMENT', 'VENDOR') DEFAULT 'DEPARTMENT' AFTER status;

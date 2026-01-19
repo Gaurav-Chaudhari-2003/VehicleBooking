@@ -11,6 +11,21 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
+// Auto-retire expired vendor vehicles
+// Logic: If ownership is VENDOR and contract_end_date < today and status != RETIRED, set status to RETIRED
+$today = date('Y-m-d');
+$expire_query = "UPDATE vehicles v 
+                 JOIN vehicle_contracts vc ON v.id = vc.vehicle_id 
+                 SET v.status = 'RETIRED' 
+                 WHERE v.ownership_type = 'VENDOR' 
+                   AND v.status != 'RETIRED' 
+                   AND vc.contract_end_date < ?";
+$expire_stmt = $mysqli->prepare($expire_query);
+$expire_stmt->bind_param('s', $today);
+$expire_stmt->execute();
+$expire_stmt->close();
+
+
 // Handle AJAX Actions (Retire, Restore)
 if (isset($_GET['ajax_action'])) {
     $action = $_GET['ajax_action'];
@@ -41,10 +56,19 @@ if (isset($_GET['ajax_action'])) {
 if (isset($_GET['ajax_filter'])) {
     $show_retired = $_GET['show_retired'] == 'true';
     
+    // Fetch vehicles with ownership info
     if ($show_retired) {
-        $ret = "SELECT * FROM vehicles WHERE status = 'RETIRED' ORDER BY id DESC";
+        $ret = "SELECT v.*, vc.contract_end_date 
+                FROM vehicles v 
+                LEFT JOIN vehicle_contracts vc ON v.id = vc.vehicle_id 
+                WHERE v.status = 'RETIRED' 
+                ORDER BY v.id DESC";
     } else {
-        $ret = "SELECT * FROM vehicles WHERE status != 'RETIRED' ORDER BY id DESC";
+        $ret = "SELECT v.*, vc.contract_end_date 
+                FROM vehicles v 
+                LEFT JOIN vehicle_contracts vc ON v.id = vc.vehicle_id 
+                WHERE v.status != 'RETIRED' 
+                ORDER BY v.id DESC";
     }
     
     $stmt = $mysqli->prepare($ret);
@@ -55,13 +79,31 @@ if (isset($_GET['ajax_filter'])) {
     if ($res->num_rows > 0) {
         while ($row = $res->fetch_object()) {
             $img = !empty($row->image) ? "../vendor/img/" . $row->image : "../vendor/img/placeholder.png";
+            $ownership_badge = ($row->ownership_type == 'VENDOR')
+                ? '<span class="badge badge-warning">Vendor</span>'
+                : '<span class="badge badge-primary">Dept</span>';
+
+            // Check contract expiry for vendor vehicles
+            $contract_status = "";
+            if ($row->ownership_type == 'VENDOR' && !empty($row->contract_end_date)) {
+                $today = date('Y-m-d');
+                if ($row->contract_end_date < $today) {
+                    $contract_status = '<br><small class="text-danger font-weight-bold">Expired: ' . $row->contract_end_date . '</small>';
+                } else {
+                    $contract_status = '<br><small class="text-muted">Ends: ' . $row->contract_end_date . '</small>';
+                }
+            }
             ?>
             <tr id="vehicle-row-<?php echo $row->id; ?>">
                 <td><?php echo $cnt; ?></td>
                 <td class="p-0 text-center align-middle" style="width: 100px;">
                     <img src="<?php echo $img; ?>" alt="Vehicle Image" style="width: 100%; height: 80px; object-fit: cover; display: block;">
                 </td>
-                <td><?php echo $row->name; ?></td>
+                <td>
+                    <?php echo $row->name; ?>
+                    <div class="mt-1"><?php echo $ownership_badge; ?></div>
+                    <?php echo $contract_status; ?>
+                </td>
                 <td><?php echo $row->reg_no; ?></td>
                 <td><?php echo $row->category; ?></td>
                 <td><?php echo $row->fuel_type; ?></td>
@@ -145,7 +187,7 @@ $show_retired = isset($_GET['show_retired']) && $_GET['show_retired'] == 'true';
                             <tr>
                                 <th>#</th>
                                 <th style="width: 100px;">Image</th>
-                                <th>Name</th>
+                                <th>Name & Ownership</th>
                                 <th>Registration Number</th>
                                 <th>Category</th>
                                 <th>Fuel Type</th>
@@ -156,10 +198,19 @@ $show_retired = isset($_GET['show_retired']) && $_GET['show_retired'] == 'true';
                             </thead>
                             <tbody>
                             <?php
+                            // Initial Load Logic (Same as AJAX but for first render)
                             if ($show_retired) {
-                                $ret = "SELECT * FROM vehicles WHERE status = 'RETIRED' ORDER BY id DESC";
+                                $ret = "SELECT v.*, vc.contract_end_date 
+                                        FROM vehicles v 
+                                        LEFT JOIN vehicle_contracts vc ON v.id = vc.vehicle_id 
+                                        WHERE v.status = 'RETIRED' 
+                                        ORDER BY v.id DESC";
                             } else {
-                                $ret = "SELECT * FROM vehicles WHERE status != 'RETIRED' ORDER BY id DESC";
+                                $ret = "SELECT v.*, vc.contract_end_date 
+                                        FROM vehicles v 
+                                        LEFT JOIN vehicle_contracts vc ON v.id = vc.vehicle_id 
+                                        WHERE v.status != 'RETIRED' 
+                                        ORDER BY v.id DESC";
                             }
                             
                             $stmt = $mysqli->prepare($ret);
@@ -170,13 +221,31 @@ $show_retired = isset($_GET['show_retired']) && $_GET['show_retired'] == 'true';
                             if ($res->num_rows > 0) {
                                 while ($row = $res->fetch_object()) {
                                     $img = !empty($row->image) ? "../vendor/img/" . $row->image : "../vendor/img/placeholder.png";
+                                    $ownership_badge = ($row->ownership_type == 'VENDOR')
+                                        ? '<span class="badge badge-warning">Vendor</span>'
+                                        : '<span class="badge badge-primary">Dept</span>';
+
+                                    // Check contract expiry for vendor vehicles
+                                    $contract_status = "";
+                                    if ($row->ownership_type == 'VENDOR' && !empty($row->contract_end_date)) {
+                                        $today = date('Y-m-d');
+                                        if ($row->contract_end_date < $today) {
+                                            $contract_status = '<br><small class="text-danger font-weight-bold">Expired: ' . $row->contract_end_date . '</small>';
+                                        } else {
+                                            $contract_status = '<br><small class="text-muted">Ends: ' . $row->contract_end_date . '</small>';
+                                        }
+                                    }
                                     ?>
                                     <tr id="vehicle-row-<?php echo $row->id; ?>">
                                         <td><?php echo $cnt; ?></td>
                                         <td class="p-0 text-center align-middle" style="width: 100px;">
                                             <img src="<?php echo $img; ?>" alt="Vehicle Image" style="width: 100%; height: 80px; object-fit: cover; display: block;">
                                         </td>
-                                        <td><?php echo $row->name; ?></td>
+                                        <td>
+                                            <?php echo $row->name; ?>
+                                            <div class="mt-1"><?php echo $ownership_badge; ?></div>
+                                            <?php echo $contract_status; ?>
+                                        </td>
                                         <td><?php echo $row->reg_no; ?></td>
                                         <td><?php echo $row->category; ?></td>
                                         <td><?php echo $row->fuel_type; ?></td>
