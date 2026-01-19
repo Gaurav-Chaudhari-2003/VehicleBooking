@@ -41,7 +41,7 @@ if (isset($_POST['reset-pwd'])) {
 
         $otp = rand(100000, 999999);
 
-        // Create table if missing
+        // Create a table if missing
         $mysqli->query("
             CREATE TABLE IF NOT EXISTS password_resets (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -166,6 +166,7 @@ if (isset($_POST['set-password'])) {
     }
     else {
 
+        global $mysqli;
         $stmt = $mysqli->prepare("
             UPDATE users
             SET password=?

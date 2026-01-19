@@ -1,8 +1,15 @@
 <?php
 global $mysqli;
+
+use includes\BrevoMailer;
+use includes\MailTemplates;
+
 session_start();
 include('../DATABASE FILE/config.php');
 include('../DATABASE FILE/checklogin.php');
+require_once '../includes/BrevoMailer.php';
+require_once '../includes/MailTemplates.php';
+
 check_login();
 $aid = $_SESSION['a_id'];
 $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
@@ -10,28 +17,28 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
 if (isset($_POST['approve_booking'])) {
     $booking_id = $_GET['booking_id'];
     $booking_status = $_POST['approve_booking']; // takes value from clicked button (APPROVED or REJECTED)
-    
+
     $status_enum = strtoupper($booking_status);
     if ($status_enum == 'CANCELLED') $status_enum = 'REJECTED'; // Admin usually rejects.
     if ($booking_status == 'Approved') $status_enum = 'APPROVED';
 
     $admin_remarks = $_POST['admin_remarks'];
-    $driver_id = isset($_POST['driver_id']) && !empty($_POST['driver_id']) ? $_POST['driver_id'] : null;
-    
+    $driver_id = !empty($_POST['driver_id']) ? $_POST['driver_id'] : null;
+
     // Capture editable fields
     $from_datetime = $_POST['from_datetime'];
     $to_datetime = $_POST['to_datetime'];
-    
+
     // Simple check if it's just a date (length 10: YYYY-MM-DD)
     if (strlen($from_datetime) == 10) $from_datetime .= ' 00:00:00';
-    if (strlen($to_datetime) == 10) $to_datetime .= ' 23:59:59'; // Assuming 'To' implies inclusive end of day
+    if (strlen($to_datetime) == 10) $to_datetime .= ' 23:59:59'; // Assuming 'To' implies the inclusive end of day
 
     $pickup_location = $_POST['pickup_location'];
     $drop_location = $_POST['drop_location'];
 
     $conflict_found = false;
 
-    // VALIDATION: Check if driver is selected for approval
+    // VALIDATION: Check if a driver is selected for approval
     if ($status_enum === 'APPROVED' && empty($driver_id)) {
         $conflict_found = true;
         $err = "Cannot approve! Please assign a valid driver.";
@@ -46,19 +53,19 @@ if (isset($_POST['approve_booking'])) {
         $v_res = $v_stmt->get_result();
         if ($v_row = $v_res->fetch_assoc()) {
             $vehicle_id = $v_row['vehicle_id'];
-            
+
             // Check for overlaps with other APPROVED bookings for the same vehicle
             $conflict_query = "SELECT id FROM bookings 
                                WHERE vehicle_id = ? 
                                  AND status = 'APPROVED' 
                                  AND id != ? 
                                  AND (from_datetime <= ? AND to_datetime >= ?)";
-            
+
             $c_stmt = $mysqli->prepare($conflict_query);
             $c_stmt->bind_param('iiss', $vehicle_id, $booking_id, $to_datetime, $from_datetime);
             $c_stmt->execute();
             $c_stmt->store_result();
-            
+
             if ($c_stmt->num_rows > 0) {
                 $conflict_found = true;
                 $err = "Cannot approve! This vehicle is already booked (Approved) for the selected dates.";
@@ -74,12 +81,12 @@ if (isset($_POST['approve_booking'])) {
                                         AND status = 'APPROVED' 
                                         AND id != ? 
                                         AND (from_datetime <= ? AND to_datetime >= ?)";
-            
+
             $dc_stmt = $mysqli->prepare($driver_conflict_query);
             $dc_stmt->bind_param('iiss', $driver_id, $booking_id, $to_datetime, $from_datetime);
             $dc_stmt->execute();
             $dc_stmt->store_result();
-            
+
             if ($dc_stmt->num_rows > 0) {
                 $conflict_found = true;
                 $err = "Cannot approve! The selected driver is already assigned to another vehicle for these dates.";
@@ -95,7 +102,8 @@ if (isset($_POST['approve_booking'])) {
         $stmt->bind_param('sissssi', $status_enum, $driver_id, $from_datetime, $to_datetime, $pickup_location, $drop_location, $booking_id);
         $stmt->execute();
 
-        if ($stmt) {
+        if ($stmt->affected_rows >= 0) {
+
             // Insert Admin Remark
             if (!empty($admin_remarks)) {
                 $entity_type = 'BOOKING';
@@ -103,8 +111,8 @@ if (isset($_POST['approve_booking'])) {
                 $remark_stmt = $mysqli->prepare($remark_query);
                 $remark_stmt->bind_param('siis', $entity_type, $booking_id, $aid, $admin_remarks);
                 $remark_stmt->execute();
-                
-                // Update last_remark_id in bookings table
+
+                // Update last_remark_id in the bookings table
                 $last_remark_id = $mysqli->insert_id;
                 $update_remark_id = $mysqli->prepare("UPDATE bookings SET last_remark_id = ? WHERE id = ?");
                 $update_remark_id->bind_param('ii', $last_remark_id, $booking_id);
@@ -119,7 +127,7 @@ if (isset($_POST['approve_booking'])) {
                 $detailsStmt->bind_param('i', $booking_id);
                 $detailsStmt->execute();
                 $detailsResult = $detailsStmt->get_result();
-                
+
                 if ($row = $detailsResult->fetch_assoc()) {
                     $vehicle_id = $row['vehicle_id'];
 
@@ -130,7 +138,7 @@ if (isset($_POST['approve_booking'])) {
                                       AND status = 'PENDING' 
                                       AND id != ? 
                                       AND (from_datetime <= ? AND to_datetime >= ?)";
-                    
+
                     $rejectStmt = $mysqli->prepare($rejectQuery);
                     $rejectStmt->bind_param('iiss', $vehicle_id, $booking_id, $to_datetime, $from_datetime);
                     $rejectStmt->execute();
@@ -141,13 +149,146 @@ if (isset($_POST['approve_booking'])) {
             $action = "Booking " . ucfirst(strtolower($status_enum));
             $log_remark = "Admin updated status to $status_enum. Remarks: $admin_remarks. Driver Assigned ID: " . ($driver_id ?? 'None');
             $entity_type = 'BOOKING';
-            
+
             $hist_stmt = $mysqli->prepare("INSERT INTO operation_history (entity_type, entity_id, action, performed_by, remark) VALUES (?, ?, ?, ?, ?)");
             $hist_stmt->bind_param('sisis', $entity_type, $booking_id, $action, $aid, $log_remark);
             $hist_stmt->execute();
 
             // Optional: Set a flash message in session if needed
             $_SESSION['flash_success'] = "Booking has been " . strtolower($status_enum) . " successfully.";
+
+
+            // ===== FETCH FULL DETAILS FOR MAIL =====
+            $q = $mysqli->prepare("
+                SELECT
+                    b.from_datetime,
+                    b.to_datetime,
+                    b.pickup_location,
+                    b.drop_location,
+                    b.purpose,
+                
+                    u.first_name AS uf,
+                    u.last_name  AS ul,
+                    u.email      AS uemail,
+                    u.phone      AS uphone,
+                
+                    v.name       AS vehicle,
+                
+                    d.user_id    AS duid,
+                
+                    ud.first_name AS df,
+                    ud.last_name  AS dl,
+                    ud.email      AS demail,
+                    ud.phone      AS dphone
+                
+                FROM bookings b
+                JOIN users u      ON b.user_id = u.id
+                JOIN vehicles v   ON b.vehicle_id = v.id
+                
+                LEFT JOIN drivers d  ON b.driver_id = d.id
+                LEFT JOIN users ud   ON d.user_id = ud.id
+                
+                WHERE b.id = ?"
+            );
+
+            $q->bind_param('i', $booking_id);
+            $q->execute();
+
+            $D = $q->get_result()->fetch_assoc();
+
+            if (!$D) {
+                error_log("MAIL: Booking data not found for ID: $booking_id");
+                return;   // safer than goto
+            }
+
+            // ----- Formatting -----
+            $from = date('d M Y h:i A', strtotime($D['from_datetime']));
+            $to   = date('d M Y h:i A', strtotime($D['to_datetime']));
+
+            $userName   = trim($D['uf'].' '.$D['ul']);
+            $driverName = trim(($D['df'] ?? '').' '.($D['dl'] ?? ''));
+
+            $driverPhone = $D['dphone'] ?: 'Not Assigned';
+
+
+            // ===== PREPARE DATA =====
+            $userData = [
+                    'status'       => $status_enum,
+                    'vehicle'      => $D['vehicle'] ?? 'N/A',
+
+                    'from'         => $from,
+                    'to'           => $to,
+
+                    'pickup'       => $D['pickup_location'] ?? 'N/A',
+                    'drop'         => $D['drop_location'] ?? 'N/A',
+
+                    'driver'       => $driverName ?: 'Not Assigned',
+                    'driver_phone' => $driverPhone,
+
+                    'remark'       => $admin_remarks ?: 'No remarks'
+            ];
+
+            // ===== ICS CALENDAR =====
+            $ics = MailTemplates::ics($userData);
+
+
+            // ===== MAIL TO USER =====
+            try {
+
+                $html = MailTemplates::userMail($userData);
+
+                BrevoMailer::send(
+                        $D['uemail'],
+                        $userName,
+                        "Booking $status_enum",
+                        $html,
+                        $ics       // 📅 calendar attached
+                );
+
+                error_log("MAIL: Sent to USER {$D['uemail']} for booking $booking_id");
+
+            } catch (Exception $e) {
+                error_log("MAIL USER ERROR: ".$e->getMessage());
+            }
+
+
+            // ===== MAIL TO DRIVER =====
+            if ($status_enum === 'APPROVED' && !empty($D['demail'])) {
+
+                $driverData = [
+                        'user'       => $userName,
+                        'user_phone' => $D['uphone'],
+
+                        'vehicle'    => $D['vehicle'],
+
+                        'from'       => $from,
+                        'to'         => $to,
+
+                        'pickup'     => $D['pickup_location'],
+                        'drop'       => $D['drop_location']
+                ];
+
+                try {
+
+                    $html2 = MailTemplates::driverMail($driverData);
+
+                    BrevoMailer::send(
+                            $D['demail'],
+                            $driverName,
+                            "Driver Assignment – {$D['vehicle']}",
+                            $html2,
+                            $ics      // 📅 calendar
+                    );
+
+                    error_log("MAIL: Sent to DRIVER {$D['demail']}");
+
+                } catch (Exception $e) {
+                    error_log("MAIL DRIVER ERROR: ".$e->getMessage());
+                }
+            }
+
+        }
+
 
             // Redirect to dashboard after short delay
             echo "<script>
@@ -156,9 +297,8 @@ if (isset($_POST['approve_booking'])) {
             }, 1500);
         </script>";
             exit(); // Kill the current page execution
-        } else {
+    } else {
             $err = "Failed to update booking.";
-        }
     }
 }
 
@@ -417,8 +557,8 @@ if (isset($_POST['approve_booking'])) {
 
 <script>
     function validateApprove() {
-        var driver = document.getElementById("driver_select").value;
-        if (driver == "") {
+        const driver = document.getElementById("driver_select").value;
+        if (driver === "") {
             swal("Error!", "Please assign a driver before approving.", "error");
             return false;
         }
@@ -426,8 +566,8 @@ if (isset($_POST['approve_booking'])) {
     }
 
     // Reusing logic from user-confirm-booking.php (adapted for admin)
-    // Note: Paths to get-approved-dates.php need to be correct relative to admin folder.
-    // Assuming get-approved-dates.php is in 'usr' folder, we need '../usr/get-approved-dates.php'
+    // Note: Paths to get-approved-dates.php need to be correct relative to the admin folder.
+    // Assuming get-approved-dates.php is in the 'usr' folder, we need '../usr/get-approved-dates.php'
     
     async function fetchBookedDates(vehicleId) {
         const res = await fetch(`../usr/get-approved-dates.php?v_id=${vehicleId}`);
@@ -495,7 +635,7 @@ if (isset($_POST['approve_booking'])) {
                 const date = dayElem.dateObj;
                 const dateString = flatpickr.formatDate(date, "Y-m-d");
 
-                // Check if date is in approved ranges
+                // Check if the date is in approved ranges
                 for (const range of approvedRanges) {
                     if (dateString >= range.book_from_date && dateString <= range.book_to_date) {
                         dayElem.classList.add("booked");
@@ -504,7 +644,7 @@ if (isset($_POST['approve_booking'])) {
                     }
                 }
 
-                // Check if date is in pending ranges
+                // Check if the date is in pending ranges
                 for (const range of pendingRanges) {
                     if (dateString >= range.book_from_date && dateString <= range.book_to_date) {
                         dayElem.classList.add("pending");
@@ -525,7 +665,7 @@ if (isset($_POST['approve_booking'])) {
 
         if (!vehicleId || !fromInput || !toInput) return;
 
-        // Calculate date 15 days ago (or just use today for admin flexibility)
+        // Calculated date 15 days ago (or just use today for admin flexibility)
         const today = new Date();
         const pastDate = new Date(today);
         pastDate.setDate(today.getDate() - 30); // Allow admin to see/edit past bookings more freely
@@ -542,10 +682,10 @@ if (isset($_POST['approve_booking'])) {
 
             const fromPicker = flatpickr(fromInput, buildFlatpickrOptions(approvedRanges, pendingRanges, minDateStr));
             
-            // Initialize To Date picker with similar options
+            // Initialize the To Date picker with similar options
             // Note: Admin might want to override overlaps, but visual cues are helpful.
             // We'll use the same logic but maybe less restrictive on 'disable' if admin needs to force.
-            // For now, keeping it consistent with user view to prevent double booking errors.
+            // For now, keeping it consistent with the user view to prevent double booking errors.
             
             const toOptions = buildFlatpickrOptions(approvedRanges, pendingRanges, minDateStr);
             const toPicker = flatpickr(toInput, toOptions);
