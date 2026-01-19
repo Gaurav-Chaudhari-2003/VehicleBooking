@@ -40,6 +40,11 @@ if (isset($_GET['ajax_action'])) {
         }
         $stmt->close();
     } elseif ($action == 'restore') {
+        // For restore, we just update status to AVAILABLE here for simplicity, 
+        // but the UI will redirect to manage page for full restore logic if needed.
+        // However, the request says "the action should opens the admin-manage-single-vehicle.php".
+        // So this AJAX block might not be used for 'restore' if we change the button to a link.
+        // But let's keep it for non-vendor vehicles or as a fallback.
         $stmt = $mysqli->prepare("UPDATE vehicles SET status = 'AVAILABLE' WHERE id = ?");
         $stmt->bind_param('i', $id);
         if ($stmt->execute()) {
@@ -122,9 +127,16 @@ if (isset($_GET['ajax_filter'])) {
                     ?>
                 </td>
                 <td>
-                    <?php if ($show_retired) { ?>
-                        <button class="badge badge-success border-0" onclick="performAction('restore', <?php echo $row->id; ?>)"><i class="fas fa-recycle"></i> Restore</button>
-                    <?php } else { ?>
+                    <?php if ($show_retired) { 
+                        // Logic for Restore button:
+                        // If VENDOR, link to manage page.
+                        // If DEPARTMENT, use AJAX restore.
+                        if ($row->ownership_type == 'VENDOR') {
+                            echo '<a href="admin-manage-single-vehicle.php?v_id=' . $row->id . '" class="badge badge-success"><i class="fas fa-recycle"></i> Restore</a>';
+                        } else {
+                            echo '<button class="badge badge-success border-0" onclick="performAction(\'restore\', ' . $row->id . ')"><i class="fas fa-recycle"></i> Restore</button>';
+                        }
+                    } else { ?>
                         <a href="admin-manage-single-vehicle.php?v_id=<?php echo $row->id; ?>" class="badge badge-success"><i class="fa fa-edit"></i> Update</a>
                         <button class="badge badge-danger border-0" onclick="performAction('retire', <?php echo $row->id; ?>)"><i class="fa fa-trash"></i> Retire</button>
                     <?php } ?>
@@ -264,9 +276,16 @@ $show_retired = isset($_GET['show_retired']) && $_GET['show_retired'] == 'true';
                                             ?>
                                         </td>
                                         <td>
-                                            <?php if ($show_retired) { ?>
-                                                <button class="badge badge-success border-0" onclick="performAction('restore', <?php echo $row->id; ?>)"><i class="fas fa-recycle"></i> Restore</button>
-                                            <?php } else { ?>
+                                            <?php if ($show_retired) { 
+                                                // Logic for Restore button:
+                                                // If VENDOR, link to manage page.
+                                                // If DEPARTMENT, use AJAX restore.
+                                                if ($row->ownership_type == 'VENDOR') {
+                                                    echo '<a href="admin-manage-single-vehicle.php?v_id=' . $row->id . '" class="badge badge-success"><i class="fas fa-recycle"></i> Restore</a>';
+                                                } else {
+                                                    echo '<button class="badge badge-success border-0" onclick="performAction(\'restore\', ' . $row->id . ')"><i class="fas fa-recycle"></i> Restore</button>';
+                                                }
+                                            } else { ?>
                                                 <a href="admin-manage-single-vehicle.php?v_id=<?php echo $row->id; ?>" class="badge badge-success"><i class="fa fa-edit"></i> Update</a>
                                                 <button class="badge badge-danger border-0" onclick="performAction('retire', <?php echo $row->id; ?>)"><i class="fa fa-trash"></i> Retire</button>
                                             <?php } ?>
