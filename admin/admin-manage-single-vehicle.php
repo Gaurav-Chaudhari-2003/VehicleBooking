@@ -11,23 +11,30 @@ if (isset($_POST['update_veh'])) {
     $v_name = $_POST['v_name'];
     $v_reg_no = $_POST['v_reg_no'];
     $v_category = $_POST['v_category'];
-    $v_fuel_type = $_POST['v_fuel_type']; 
-    $v_capacity = $_POST['v_capacity'];   
+    $v_fuel_type = $_POST['v_fuel_type'];
+    $v_capacity = $_POST['v_capacity'];
     $v_status = $_POST['v_status'];
     $v_dpic = $_FILES["v_dpic"]["name"];
-    
+
     // Vendor Details
     $v_ownership = $_POST['v_ownership']; // 'DEPARTMENT' or 'VENDOR'
-    
+
     $vendor_name = ($v_ownership === 'VENDOR') ? trim($_POST['vendor_name']) : null;
     $vendor_phone = ($v_ownership === 'VENDOR') ? trim($_POST['vendor_phone']) : null;
     $vendor_email = ($v_ownership === 'VENDOR') ? trim($_POST['vendor_email']) : null;
     $vendor_addr = ($v_ownership === 'VENDOR') ? trim($_POST['vendor_addr']) : null;
-    
+
     $contract_start = ($v_ownership === 'VENDOR') ? $_POST['contract_start'] : null;
     $contract_end = ($v_ownership === 'VENDOR') ? $_POST['contract_end'] : null;
     $contract_budget = ($v_ownership === 'VENDOR') ? $_POST['contract_budget'] : 0.00;
     $contract_status = ($v_ownership === 'VENDOR') ? $_POST['contract_status'] : 'ACTIVE';
+
+    // Auto-retire logic for vendor vehicles
+    if ($v_ownership === 'VENDOR' && ($contract_status === 'EXPIRED' || $contract_status === 'TERMINATED')) {
+        $v_status = 'RETIRED';
+    } else if($v_ownership === 'VENDOR' && $contract_status === 'ACTIVE' && $v_status === 'RETIRED') {
+        $v_status = 'AVAILABLE';
+    }
 
     global $mysqli;
 
@@ -53,7 +60,7 @@ if (isset($_POST['update_veh'])) {
             $stmt = $mysqli->prepare($query);
             $stmt->bind_param('ssssissi', $v_name, $v_reg_no, $v_category, $v_fuel_type, $v_capacity, $v_status, $v_ownership, $v_id);
         }
-        
+
         if ($stmt->execute()) {
             // Handle Vendor and Contract Logic
             if ($v_ownership === 'VENDOR') {
@@ -63,17 +70,17 @@ if (isset($_POST['update_veh'])) {
                 $check_vendor->bind_param('s', $vendor_name);
                 $check_vendor->execute();
                 $check_vendor->store_result();
-                
+
                 if ($check_vendor->num_rows > 0) {
                     $check_vendor->bind_result($vendor_id);
                     $check_vendor->fetch();
-                    
+
                     // Optional: Update vendor details if needed
                     $update_vendor = $mysqli->prepare("UPDATE vendors SET phone=?, email=?, address=? WHERE id=?");
                     $update_vendor->bind_param('sssi', $vendor_phone, $vendor_email, $vendor_addr, $vendor_id);
                     $update_vendor->execute();
                     $update_vendor->close();
-                    
+
                 } else {
                     $create_vendor = $mysqli->prepare("INSERT INTO vendors (name, phone, email, address) VALUES (?, ?, ?, ?)");
                     $create_vendor->bind_param('ssss', $vendor_name, $vendor_phone, $vendor_email, $vendor_addr);
@@ -89,7 +96,7 @@ if (isset($_POST['update_veh'])) {
                 $check_contract->bind_param('i', $v_id);
                 $check_contract->execute();
                 $check_contract->store_result();
-                
+
                 if ($check_contract->num_rows > 0) {
                     $check_contract->bind_result($contract_id);
                     $check_contract->fetch();
@@ -107,7 +114,7 @@ if (isset($_POST['update_veh'])) {
                 }
                 $check_contract->close();
             }
-            
+
             $succ = "Vehicle Updated Successfully!";
         } else {
             $err = "Please Try Again Later. Error: " . $stmt->error;
@@ -299,7 +306,7 @@ if (isset($_POST['update_veh'])) {
                                                 <div class="col-md-3">
                                                     <div class="form-group">
                                                         <label class="small font-weight-bold">Status</label>
-                                                        <select class="form-control form-control-sm custom-select" name="contract_status" id="contract_status">
+                                                        <select class="form-control form-control-sm custom-select" name="contract_status" id="contract_status" onchange="autoRetireCheck()">
                                                             <option value="ACTIVE" <?php if(($row->contract_status ?? '') == 'ACTIVE') echo 'selected'; ?>>Active</option>
                                                             <option value="EXPIRED" <?php if(($row->contract_status ?? '') == 'EXPIRED') echo 'selected'; ?>>Expired</option>
                                                             <option value="TERMINATED" <?php if(($row->contract_status ?? '') == 'TERMINATED') echo 'selected'; ?>>Terminated</option>
@@ -406,10 +413,26 @@ if (isset($_POST['update_veh'])) {
         }
     }
     
+    function autoRetireCheck() {
+        var contractStatus = document.getElementById("contract_status").value;
+        var vehicleStatus = document.getElementById("v_status");
+        
+        if (contractStatus === "EXPIRED" || contractStatus === "TERMINATED") {
+            vehicleStatus.value = "RETIRED";
+        } else if (contractStatus === "ACTIVE" && vehicleStatus.value === "RETIRED") {
+            vehicleStatus.value = "AVAILABLE";
+        }
+    }
+    
     // Update file input label
     $('.custom-file-input').on('change', function() {
         let fileName = $(this).val().split('\\').pop();
         $(this).next('.custom-file-label').addClass("selected").html(fileName);
+    });
+
+    // Initialize fields on load
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleVendorFields();
     });
 </script>
 

@@ -4,31 +4,50 @@
   include('../DATABASE FILE/checklogin.php');
   check_login();
   $aid=$_SESSION['a_id'];
+  
   //Add Booking
   if(isset($_POST['book_vehicle']))
     {
             $u_id = $_GET['u_id'];
-            //$u_fname=$_POST['u_fname'];
-            //$u_lname = $_POST['u_lname'];
-            //$u_phone=$_POST['u_phone'];
-            //$u_addr=$_POST['u_addr'];
-            $u_car_type = $_POST['u_car_type'];
-           $u_car_regno  = $_POST['u_car_regno'];
-            $u_car_bookdate = $_POST['u_car_bookdate'];
-            $u_car_book_status  = $_POST['u_car_book_status'];
-            $query="update tms_user set u_car_type=?, u_car_bookdate=?, u_car_regno=?, u_car_book_status=? where u_id=?";
+            $vehicle_id = $_POST['vehicle_id']; // Changed from u_car_regno to vehicle_id
+            $book_from_date = $_POST['book_from_date'];
+            $book_to_date = $_POST['book_to_date'];
+            $status = $_POST['status'];
+            $pickup_location = $_POST['pickup_location'];
+            $drop_location = $_POST['drop_location'];
+            $purpose = $_POST['purpose'];
+            
+            // New Schema: bookings table
+            // Columns: user_id, vehicle_id, from_datetime, to_datetime, pickup_location, drop_location, purpose, status
+            
+            // Ensure dates are formatted correctly (append time if needed)
+            if (strlen($book_from_date) == 10) $book_from_date .= ' 00:00:00';
+            if (strlen($book_to_date) == 10) $book_to_date .= ' 23:59:59';
+
+            $query="INSERT INTO bookings (user_id, vehicle_id, from_datetime, to_datetime, pickup_location, drop_location, purpose, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $mysqli->prepare($query);
-            $rc=$stmt->bind_param('ssssi', $u_car_type, $u_car_bookdate, $u_car_regno, $u_car_book_status, $u_id);
-            $stmt->execute();
-                if($stmt)
-                {
-                    $succ = "User Booking Added";
-                }
-                else 
-                {
-                    $err = "Please Try Again Later";
-                }
+            $stmt->bind_param('iissssss', $u_id, $vehicle_id, $book_from_date, $book_to_date, $pickup_location, $drop_location, $purpose, $status);
+            
+            if($stmt->execute())
+            {
+                $succ = "User Booking Added";
+                
+                // Log the operation
+                $action = "Admin Created Booking";
+                $log_remark = "Booking created for User ID: $u_id, Vehicle ID: $vehicle_id";
+                $entity_type = 'BOOKING';
+                $entity_id = $stmt->insert_id;
+                
+                $hist_stmt = $mysqli->prepare("INSERT INTO operation_history (entity_type, entity_id, action, performed_by, remark) VALUES (?, ?, ?, ?, ?)");
+                $hist_stmt->bind_param('sisis', $entity_type, $entity_id, $action, $aid, $log_remark);
+                $hist_stmt->execute();
             }
+            else 
+            {
+                $err = "Please Try Again Later. Error: " . $stmt->error;
+            }
+            $stmt->close();
+    }
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -64,7 +83,7 @@
         <script>
                     setTimeout(function () 
                     { 
-                        swal("Failed!","<?php echo $err;?>!","Failed");
+                        swal("Failed!","<?php echo $err;?>!","error");
                     },
                         100);
         </script>
@@ -86,10 +105,11 @@
         <div class="card-body">
           <!--Add User Form-->
           <?php
-            $aid=$_GET['u_id'];
-            $ret="select * from tms_user where u_id=?";
+            $u_id=$_GET['u_id'];
+            // Updated query to match new schema: users table
+            $ret="select * from users where id=?";
             $stmt= $mysqli->prepare($ret) ;
-            $stmt->bind_param('i',$aid);
+            $stmt->bind_param('i',$u_id);
             $stmt->execute() ;//ok
             $res=$stmt->get_result();
             //$cnt=1;
@@ -99,73 +119,75 @@
           <form method ="POST"> 
             <div class="form-group">
                 <label for="exampleInputEmail1">First Name</label>
-                <input type="text" value="<?php echo $row->u_fname;?>" required class="form-control" id="exampleInputEmail1" name="u_fname">
+                <input type="text" value="<?php echo $row->first_name;?>" readonly class="form-control" name="u_fname">
             </div>
             <div class="form-group">
                 <label for="exampleInputEmail1">Last Name</label>
-                <input type="text" class="form-control" value="<?php echo $row->u_lname;?>" id="exampleInputEmail1" name="u_lname">
+                <input type="text" class="form-control" value="<?php echo $row->last_name;?>" readonly name="u_lname">
             </div>
             <div class="form-group">
                 <label for="exampleInputEmail1">Contact</label>
-                <input type="text" class="form-control" value="<?php echo $row->u_phone;?>" id="exampleInputEmail1" name="u_phone">
+                <input type="text" class="form-control" value="<?php echo $row->phone;?>" readonly name="u_phone">
             </div>
             <div class="form-group">
                 <label for="exampleInputEmail1">Address</label>
-                <input type="text" class="form-control" value="<?php echo $row->u_addr;?>" id="exampleInputEmail1" name="u_addr">
-            </div>
-
-            <div class="form-group" style="display:none">
-                <label for="exampleInputEmail1">Category</label>
-                <input type="text" class="form-control" id="exampleInputEmail1" value="User" name="u_category">
+                <input type="text" class="form-control" value="<?php echo $row->address;?>" readonly name="u_addr">
             </div>
             
             <div class="form-group">
                 <label for="exampleInputEmail1">Email address</label>
-                <input type="email" value="<?php echo $row->u_email;?>" class="form-control" name="u_email"">
-            </div>
-
-            
-
-            <div class="form-group">
-              <label for="exampleFormControlSelect1">Vehicle Category</label>
-              <select class="form-control" name="u_car_type" id="exampleFormControlSelect1">
-                <option>Bus</option>
-                <option>Matatu</option>
-                <option>Nissan</option>
-
-              </select>
+                <input type="email" value="<?php echo $row->email;?>" class="form-control" readonly name="u_email">
             </div>
 
             <div class="form-group">
-              <label for="exampleFormControlSelect1">Vehicle Registration Number</label>
-              <select class="form-control" name="u_car_regno" id="exampleFormControlSelect1">
+              <label for="exampleFormControlSelect1">Vehicle (Reg No - Name - Category)</label>
+              <select class="form-control" name="vehicle_id" id="exampleFormControlSelect1">
                 <?php
-
-                $ret="SELECT * FROM tms_vehicle  "; //sql code to get to all vehicles
+                // Updated query to match new schema: vehicles table
+                $ret="SELECT * FROM vehicles WHERE status = 'AVAILABLE'"; 
                 $stmt= $mysqli->prepare($ret) ;
                 $stmt->execute() ;//ok
                 $res=$stmt->get_result();
-                $cnt=1;
-                while($row=$res->fetch_object())
+                while($veh=$res->fetch_object())
                 {
                 ?>
-                <option><?php echo $row->v_reg_no;?></option>
+                <option value="<?php echo $veh->id;?>"><?php echo $veh->reg_no . ' - ' . $veh->name . ' - ' . $veh->category;?></option>
                 <?php }?> 
               </select>
             </div>
 
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label>From Date</label>
+                    <input type="date" class="form-control" name="book_from_date" required>
+                </div>
+                <div class="form-group col-md-6">
+                    <label>To Date</label>
+                    <input type="date" class="form-control" name="book_to_date" required>
+                </div>
+            </div>
             
-
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label>Pickup Location</label>
+                    <input type="text" class="form-control" name="pickup_location" required>
+                </div>
+                <div class="form-group col-md-6">
+                    <label>Drop Location</label>
+                    <input type="text" class="form-control" name="drop_location" required>
+                </div>
+            </div>
+            
             <div class="form-group">
-                <label for="exampleInputEmail1">Booking Date</label>
-                <input type="date" class="form-control" id="exampleInputEmail1"  name="u_car_bookdate">
+                <label>Purpose</label>
+                <textarea class="form-control" name="purpose" rows="2"></textarea>
             </div>
 
             <div class="form-group">
               <label for="exampleFormControlSelect1">Booking Status</label>
-              <select class="form-control" name="u_car_book_status" id="exampleFormControlSelect1">
-                <option>Approved</option>
-                <option>Pending</option>
+              <select class="form-control" name="status" id="exampleFormControlSelect1">
+                <option value="APPROVED">Approved</option>
+                <option value="PENDING">Pending</option>
               </select>
             </div>
 
