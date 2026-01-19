@@ -11,47 +11,57 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
-// Handle AJAX Actions (Deactivate, Activate, Approve, Reject)
+// Handle AJAX Actions (Deactivate, Activate, Reject, Revert)
 if (isset($_GET['ajax_action'])) {
     $action = $_GET['ajax_action'];
     $id = intval($_GET['id']);
     $response = ['status' => 'error', 'message' => 'Invalid action'];
 
-    if ($action == 'deactivate') {
-        $stmt = $mysqli->prepare("UPDATE users SET is_active = -1 WHERE id = ?");
-        $stmt->bind_param('i', $id);
-        if ($stmt->execute()) {
-            $response = ['status' => 'success', 'message' => 'User Deactivated Successfully'];
+    try {
+        if ($action == 'deactivate') {
+            $stmt = $mysqli->prepare("UPDATE users SET is_active = -1 WHERE id = ?");
+            $stmt->bind_param('i', $id);
+            if ($stmt->execute()) {
+                $response = ['status' => 'success', 'message' => 'User Deactivated Successfully'];
+            }
+            $stmt->close();
+        } elseif ($action == 'activate') {
+            $stmt = $mysqli->prepare("UPDATE users SET is_active = 1 WHERE id = ?");
+            $stmt->bind_param('i', $id);
+            if ($stmt->execute()) {
+                $response = ['status' => 'success', 'message' => 'User Reactivated Successfully'];
+            }
+            $stmt->close();
+        } elseif ($action == 'reject') {
+            // Set is_active to -2 for Rejected
+            $stmt = $mysqli->prepare("UPDATE users SET is_active = -2 WHERE id = ?");
+            $stmt->bind_param('i', $id);
+            if ($stmt->execute()) {
+                $response = ['status' => 'success', 'message' => 'User Rejected Successfully'];
+            } else {
+                $response = ['status' => 'error', 'message' => 'Database error: ' . $stmt->error];
+            }
+            $stmt->close();
+        } elseif ($action == 'revert') {
+            // Set is_active to 0 for Pending
+            $stmt = $mysqli->prepare("UPDATE users SET is_active = 0 WHERE id = ?");
+            $stmt->bind_param('i', $id);
+            if ($stmt->execute()) {
+                $response = ['status' => 'success', 'message' => 'User Status Reverted to Pending'];
+            } else {
+                $response = ['status' => 'error', 'message' => 'Database error: ' . $stmt->error];
+            }
+            $stmt->close();
         }
-        $stmt->close();
-    } elseif ($action == 'activate') {
-        $stmt = $mysqli->prepare("UPDATE users SET is_active = 1 WHERE id = ?");
-        $stmt->bind_param('i', $id);
-        if ($stmt->execute()) {
-            $response = ['status' => 'success', 'message' => 'User Reactivated Successfully'];
-        }
-        $stmt->close();
-    } elseif ($action == 'approve') {
-        $stmt = $mysqli->prepare("UPDATE users SET is_active = 1 WHERE id = ?");
-        $stmt->bind_param('i', $id);
-        if ($stmt->execute()) {
-            $response = ['status' => 'success', 'message' => 'User Approved Successfully'];
-        }
-        $stmt->close();
-    } elseif ($action == 'reject') {
-        $stmt = $mysqli->prepare("DELETE FROM users WHERE id = ?");
-        $stmt->bind_param('i', $id);
-        if ($stmt->execute()) {
-            $response = ['status' => 'success', 'message' => 'User Rejected Successfully'];
-        }
-        $stmt->close();
+    } catch (Exception $e) {
+        $response = ['status' => 'error', 'message' => 'Exception: ' . $e->getMessage()];
     }
 
     echo json_encode($response);
     exit;
 }
 
-// Handle AJAX Filter (Table Refresh)
+// Handle AJAX Filter (Table Refresh for Registered Users)
 if (isset($_GET['ajax_filter'])) {
     $filter_role = $_GET['role'];
     $show_deactivated = $_GET['show_deactivated'] == 'true';
@@ -98,6 +108,44 @@ if (isset($_GET['ajax_filter'])) {
     exit;
 }
 
+// Handle AJAX Filter (Table Refresh for Pending/Rejected Users)
+if (isset($_GET['ajax_pending_filter'])) {
+    $show_rejected = $_GET['show_rejected'] == 'true';
+    $status = $show_rejected ? -2 : 0; // -2 for Rejected, 0 for Pending
+
+    $ret = "SELECT * FROM users WHERE is_active = ? ORDER BY id DESC";
+    $stmt = $mysqli->prepare($ret);
+    $stmt->bind_param('i', $status);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $cnt = 1;
+
+    if ($res->num_rows > 0) {
+        while ($row = $res->fetch_object()) {
+            ?>
+            <tr id="pending-row-<?php echo $row->id; ?>">
+                <td><?php echo $cnt++; ?></td>
+                <td><?php echo $row->first_name . " " . $row->last_name; ?></td>
+                <td><?php echo $row->phone; ?></td>
+                <td><?php echo $row->address; ?></td>
+                <td><?php echo $row->email; ?></td>
+                <td>
+                    <?php if ($show_rejected) { ?>
+                        <button class="badge badge-warning border-0" onclick="performAction('revert', <?php echo $row->id; ?>)"><i class="fas fa-undo"></i> Revert to Pending</button>
+                    <?php } else { ?>
+                        <a href="admin-manage-single-usr.php?u_id=<?php echo $row->id; ?>&action=approve" class="badge badge-success border-0"><i class="fas fa-check"></i> Approve</a>
+                        <button class="badge badge-danger border-0" onclick="performAction('reject', <?php echo $row->id; ?>)">Reject</button>
+                    <?php } ?>
+                </td>
+            </tr>
+            <?php
+        }
+    } else {
+        echo '<tr><td colspan="6" class="text-center text-muted">' . ($show_rejected ? 'No rejected users found.' : 'No pending approvals found.') . '</td></tr>';
+    }
+    exit;
+}
+
 // Handle Add User (Standard POST)
 if (isset($_POST['add_user'])) {
     $u_fname = $_POST['u_fname'];
@@ -122,6 +170,7 @@ if (isset($_POST['add_user'])) {
 // Initial Filter Logic (for first page load)
 $filter_role = isset($_GET['role']) ? $_GET['role'] : 'ALL';
 $show_deactivated = isset($_GET['show_deactivated']) && $_GET['show_deactivated'] == 'true';
+$show_rejected = isset($_GET['show_rejected']) && $_GET['show_rejected'] == 'true';
 ?>
 
 <!DOCTYPE html>
@@ -166,8 +215,14 @@ $show_deactivated = isset($_GET['show_deactivated']) && $_GET['show_deactivated'
 
             <!-- Pending Approvals -->
             <div class="card mb-3">
-                <div class="card-header">
-                    <i class="fas fa-user-clock"></i> Pending User Approvals
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span id="pendingTableTitle"><i class="fas fa-user-clock"></i> Pending User Approvals</span>
+                    
+                    <!-- Toggle Switch for Rejected Users -->
+                    <div class="custom-control custom-switch">
+                        <input type="checkbox" class="custom-control-input" id="rejectedSwitch" value="true" onchange="applyPendingFilters()">
+                        <label class="custom-control-label font-weight-bold" for="rejectedSwitch">Show Rejected</label>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -182,8 +237,9 @@ $show_deactivated = isset($_GET['show_deactivated']) && $_GET['show_deactivated'
                                 <th>Actions</th>
                             </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="pendingTableBody">
                             <?php
+                            // Initial load: Show Pending (0)
                             $ret = "SELECT * FROM users WHERE is_active = 0 ORDER BY id DESC";
                             $stmt = $mysqli->prepare($ret);
                             $stmt->execute();
@@ -199,7 +255,7 @@ $show_deactivated = isset($_GET['show_deactivated']) && $_GET['show_deactivated'
                                         <td><?php echo $row->address; ?></td>
                                         <td><?php echo $row->email; ?></td>
                                         <td>
-                                            <button class="badge badge-success border-0" onclick="performAction('approve', <?php echo $row->id; ?>)">Approve</button>
+                                            <a href="admin-manage-single-usr.php?u_id=<?php echo $row->id; ?>&action=approve" class="badge badge-success border-0"><i class="fas fa-check"></i> Approve</a>
                                             <button class="badge badge-danger border-0" onclick="performAction('reject', <?php echo $row->id; ?>)">Reject</button>
                                         </td>
                                     </tr>
@@ -347,12 +403,35 @@ $show_deactivated = isset($_GET['show_deactivated']) && $_GET['show_deactivated'
         });
     }
 
+    function applyPendingFilters() {
+        var showRejected = $('#rejectedSwitch').is(':checked');
+        
+        // Update header title
+        var title = showRejected ? 'Rejected Users' : 'Pending User Approvals';
+        $('#pendingTableTitle').html('<i class="fas fa-user-clock"></i> ' + title);
+
+        $.ajax({
+            url: 'admin-view-user.php',
+            type: 'GET',
+            data: { 
+                ajax_pending_filter: true, 
+                show_rejected: showRejected 
+            },
+            success: function(response) {
+                $('#pendingTableBody').html(response);
+            },
+            error: function() {
+                swal("Error!", "Failed to fetch data.", "error");
+            }
+        });
+    }
+
     function performAction(action, id) {
         let actionText = "";
         if (action === 'deactivate') actionText = "deactivate this user";
         else if (action === 'activate') actionText = "reactivate this user";
-        else if (action === 'approve') actionText = "approve this user";
         else if (action === 'reject') actionText = "reject this user";
+        else if (action === 'revert') actionText = "revert this user to pending";
 
         swal({
             title: "Are you sure?",
@@ -372,7 +451,7 @@ $show_deactivated = isset($_GET['show_deactivated']) && $_GET['show_deactivated'
                         if (response.status === 'success') {
                             swal("Success!", response.message, "success");
                             // Remove the row from the table
-                            if (action === 'approve' || action === 'reject') {
+                            if (action === 'reject' || action === 'revert') {
                                 $('#pending-row-' + id).fadeOut(500, function() { $(this).remove(); });
                             } else {
                                 $('#user-row-' + id).fadeOut(500, function() { $(this).remove(); });
@@ -381,8 +460,11 @@ $show_deactivated = isset($_GET['show_deactivated']) && $_GET['show_deactivated'
                             swal("Error!", response.message, "error");
                         }
                     },
-                    error: function() {
-                        swal("Error!", "Something went wrong.", "error");
+                    error: function(xhr, status, error) {
+                        // Improved error logging
+                        console.error("AJAX Error:", status, error);
+                        console.log("Response:", xhr.responseText);
+                        swal("Error!", "Something went wrong. Check console for details.", "error");
                     }
                 });
             }

@@ -1,10 +1,7 @@
 <?php
 global $mysqli;
 session_start();
-  include('admin/vendor/inc/config.php');
-  //include('vendor/inc/checklogin.php');
-  //check_login();
-  //$aid=$_SESSION['a_id'];
+include('DATABASE FILE/config.php'); // Corrected path
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -32,29 +29,31 @@ session_start();
       <li class="breadcrumb-item active">Gallery</li>
     </ol>
     <?php
-
-      $ret="SELECT * FROM tms_vehicle  ORDER BY RAND() LIMIT 10 "; //get all feedbacks
+      // Updated query to match new schema: vehicles table
+      $ret="SELECT * FROM vehicles ORDER BY RAND() LIMIT 10 "; 
       $stmt= $mysqli->prepare($ret) ;
       $stmt->execute() ;//ok
       $res=$stmt->get_result();
       $cnt=1;
       while($row=$res->fetch_object())
       {
+        // Updated column names: image, category, name, capacity, reg_no
+        $imagePath = 'vendor/img/' . ($row->image ?: 'placeholder.png');
     ?>
     <!-- Project One -->
     <div class="row">
       <div class="col-md-7">
         <a href="#">
-          <img class="img-fluid rounded mb-3 mb-md-0" src="vendor/img/<?php echo $row->v_dpic;?>" alt="">
+          <img class="img-fluid rounded mb-3 mb-md-0" src="<?php echo $imagePath;?>" alt="">
         </a>
       </div>
       <div class="col-md-5">
-        <h3><?php echo $row->v_category;?></h3>
+        <h3><?php echo $row->category;?></h3>
         <ul class="list-group list-group-horizontal">
-        <li class="list-group-item"><?php echo $row->v_name;?></li>
-          <li class="list-group-item"><?php echo $row->v_pass_no ;?></li>
+        <li class="list-group-item"><?php echo $row->name;?></li>
+          <li class="list-group-item"><?php echo $row->capacity ;?> Seats</li>
           <li class="list-group-item"><span class="badge badge-success">Available</span></li>
-          <li class="list-group-item"><?php echo $row->v_reg_no;?></li>
+          <li class="list-group-item"><?php echo $row->reg_no;?></li>
         </ul><br>
         <a class="btn btn-success" href="usr/">Hire Vehicle
           <span class="glyphicon glyphicon-chevron-right"></span>
