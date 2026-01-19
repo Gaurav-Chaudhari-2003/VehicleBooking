@@ -27,10 +27,20 @@ $manager_count = count_items('users', 'role', 'MANAGER');
 $admin_count = count_items('users', 'role', 'ADMIN');
 $vehicle_count = count_items('vehicles');
 
+// Auto-complete expired bookings
+// Logic: If status is 'APPROVED' and to_datetime < NOW(), set status to 'COMPLETED'
+$current_time = date('Y-m-d H:i:s');
+$update_query = "UPDATE bookings SET status = 'COMPLETED' WHERE status = 'APPROVED' AND to_datetime < ?";
+global $mysqli;
+$update_stmt = $mysqli->prepare($update_query);
+$update_stmt->bind_param('s', $current_time);
+$update_stmt->execute();
+$update_stmt->close();
+
 // Fetch bookings
 $bookings = [];
 global $mysqli;
-// Updated query to match the new schema: bookings table
+// Updated query to match new schema: bookings table
 // Columns: id, from_datetime, to_datetime, status, created_at
 // Joins: vehicles (id, name, reg_no), users (id, first_name, last_name, phone)
 if ($stmt = $mysqli->prepare("
