@@ -1,107 +1,189 @@
 <?php
 session_start();
-include('usr/vendor/inc/config.php');
-require_once __DIR__ . '/vendor/autoload.php'; // Composer autoloader
+include('DATABASE FILE/config.php');
+
+require_once __DIR__ . '/vendor/autoload.php';
 
 use Brevo\Client\Configuration;
 use Brevo\Client\Api\TransactionalEmailsApi;
 use Brevo\Client\Model\SendSmtpEmail;
+use Dotenv\Dotenv;
 
-require_once __DIR__ . '/vendor/autoload.php';
-
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+/* =====================================================
+   LOAD ENV USING COMPOSER DOTENV
+===================================================== */
+$dotenv = Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
-$apiKey = $_ENV['BREVO_API_KEY'];
-
+$apiKey      = $_ENV['BREVO_API_KEY'];
+$senderEmail = $_ENV['BREVO_SENDER_EMAIL'];
+$senderName  = $_ENV['BREVO_SENDER_NAME'];
 
 $succ = $err = $step = null;
 
-if (isset($_POST['reset-pwd'])) {
-    $email = $_POST['r_email'];
 
-    // Check if email exists
-    $stmt = $mysqli->prepare("SELECT u_id FROM tms_user WHERE u_email = ?");
+/* =====================================================
+   STEP 1 : SEND OTP
+===================================================== */
+if (isset($_POST['reset-pwd'])) {
+
+    $email = trim($_POST['r_email']);
+    global $mysqli;
+    $stmt = $mysqli->prepare("SELECT id FROM users WHERE email = ?");
     $stmt->bind_param('s', $email);
     $stmt->execute();
     $stmt->store_result();
 
-    if ($stmt->num_rows > 0) {
-        $otp = rand(100000, 999999);
-
-        $stmt = $mysqli->prepare("DELETE FROM tms_pwd_resets WHERE r_email = ?");
-        if ($stmt) {
-            $stmt->bind_param('s', $email);
-            $stmt->execute();
-        } else {
-            die("Prepare failed: " . $mysqli->error);
-        }
-
-
-        $insert = $mysqli->prepare("INSERT INTO tms_pwd_resets (r_email, otp, expires_at, created_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 15 MINUTE), NOW())");
-        $insert->bind_param('si', $email, $otp);
-        $insert->execute();
-
-
-
-
-        try {
-            $config = Configuration::getDefaultConfiguration()->setApiKey('api-key', $apiKey);
-            $apiInstance = new TransactionalEmailsApi(null, $config);
-
-            $emailContent = new SendSmtpEmail([
-                'subject' => 'Password Reset OTP',
-                'sender' => ['name' => 'Vehicle Booking - CMPDI', 'email' => 'ictcmpdiri4@gmail.com'],
-                'to' => [['email' => $email]],
-                'htmlContent' => "<p>Your OTP is <strong>$otp</strong>. Valid for 15 minutes.</p>",
-            ]);
-
-            $apiInstance->sendTransacEmail($emailContent);
-            $succ = "OTP sent to your email.";
-            $step = "verify-otp";
-            $_SESSION['reset_email'] = $email;
-        } catch (Exception $e) {
-            $err = "Failed to send email. " . $e->getMessage();
-        }
-    } else {
+    if ($stmt->num_rows === 0) {
         $err = "Email not registered.";
     }
-}
+    else {
 
-if (isset($_POST['verify-otp'])) {
-    $email = $_SESSION['reset_email'];
-    $otp = $_POST['otp'];
+        $otp = rand(100000, 999999);
 
-    $query = "SELECT r_id FROM tms_pwd_resets WHERE r_email = ? AND otp = ? AND expires_at > NOW() AND used = 0";
-    $stmt = $mysqli->prepare($query);
-    $stmt->bind_param('si', $email, $otp);
-    $stmt->execute();
-    $stmt->store_result();
+        // Create table if missing
+        $mysqli->query("
+            CREATE TABLE IF NOT EXISTS password_resets (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                email VARCHAR(150),
+                otp VARCHAR(10),
+                expires_at DATETIME,
+                used BOOLEAN DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ");
 
-    if ($stmt->num_rows == 1) {
-        $mysqli->query("UPDATE tms_pwd_resets SET used = 1 WHERE r_email = '$email'");
-        $succ = "OTP verified. Please set your new password.";
-        $step = "set-password";
-    } else {
-        $err = "Invalid or expired OTP.";
-        $step = "verify-otp";
+        // invalidate old OTP
+        $stmt = $mysqli->prepare("UPDATE password_resets SET used=1 WHERE email=?");
+        $stmt->bind_param('s', $email);
+        $stmt->execute();
+
+        // insert new
+        $stmt = $mysqli->prepare("
+            INSERT INTO password_resets 
+            (email, otp, expires_at)
+            VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 15 MINUTE))
+        ");
+        $stmt->bind_param('ss', $email, $otp);
+        $stmt->execute();
+
+
+        /* ============= BREVO EMAIL ============= */
+
+        try {
+
+            $config = Configuration::getDefaultConfiguration()
+                    ->setApiKey('api-key', $apiKey);
+
+            $api = new TransactionalEmailsApi(null, $config);
+
+            $content = new SendSmtpEmail([
+                    'subject' => 'Password Reset OTP',
+                    'sender' => [
+                            'name'  => $senderName,
+                            'email' => $senderEmail
+                    ],
+                    'to' => [
+                            ['email' => $email]
+                    ],
+                    'htmlContent' => "
+                    <h3>Password Reset</h3>
+                    <p>Your OTP is:</p>
+                    <h2>$otp</h2>
+                    <p>Valid for 15 minutes.</p>
+                "
+            ]);
+
+            $api->sendTransacEmail($content);
+
+            $_SESSION['reset_email'] = $email;
+            $succ = "OTP sent to your email.";
+            $step = "verify-otp";
+
+        }
+        catch (Exception $e) {
+            $err = "Failed to send email: " . $e->getMessage();
+        }
     }
 }
 
-if (isset($_POST['set-password'])) {
-    $email = $_SESSION['reset_email'];
-    $pass = password_hash($_POST['new_password'], PASSWORD_DEFAULT);
 
-    $stmt = $mysqli->prepare("UPDATE tms_user SET u_pwd = ? WHERE u_email = ?");
-    $stmt->bind_param('ss', $pass, $email);
-    if ($stmt->execute()) {
-        $succ = "Password updated successfully.";
-        session_destroy();
-    } else {
-        $err = "Failed to update password.";
+/* =====================================================
+   STEP 2 : VERIFY OTP
+===================================================== */
+if (isset($_POST['verify-otp'])) {
+
+    $email = $_SESSION['reset_email'] ?? null;
+    $otp   = trim($_POST['otp']);
+
+    if (!$email) {
+        $err = "Session expired. Start again.";
+    }
+    else {
+
+        $stmt = $mysqli->prepare("
+            SELECT id FROM password_resets
+            WHERE email=? AND otp=? 
+            AND expires_at > NOW() 
+            AND used=0
+        ");
+
+        $stmt->bind_param('ss', $email, $otp);
+        $stmt->execute();
+        $stmt->store_result();
+
+        if ($stmt->num_rows > 0) {
+
+            $stmt = $mysqli->prepare("
+                UPDATE password_resets
+                SET used=1
+                WHERE email=?
+            ");
+            $stmt->bind_param('s', $email);
+            $stmt->execute();
+
+            $succ = "OTP verified. Set new password.";
+            $step = "set-password";
+        }
+        else {
+            $err = "Invalid or expired OTP.";
+            $step = "verify-otp";
+        }
+    }
+}
+
+
+/* =====================================================
+   STEP 3 : SET PASSWORD
+===================================================== */
+if (isset($_POST['set-password'])) {
+
+    $email = $_SESSION['reset_email'] ?? null;
+    $pass  = password_hash($_POST['new_password'], PASSWORD_DEFAULT);
+
+    if (!$email) {
+        $err = "Session expired.";
+    }
+    else {
+
+        $stmt = $mysqli->prepare("
+            UPDATE users
+            SET password=?
+            WHERE email=?
+        ");
+        $stmt->bind_param('ss', $pass, $email);
+
+        if ($stmt->execute()) {
+            $succ = "Password updated successfully.";
+            session_destroy();
+        }
+        else {
+            $err = "Failed to update password.";
+        }
     }
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">

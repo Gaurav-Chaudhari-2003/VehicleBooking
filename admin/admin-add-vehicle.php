@@ -121,7 +121,7 @@ if (isset($_SESSION['err'])) {
 
             <div class="card shadow-lg border-0 rounded-lg mt-4">
                 <div class="card-header bg-primary text-white d-flex align-items-center">
-                    <a href="javascript:void(0);" onclick="window.location.replace('admin-dashboard.php')" class="btn btn-light btn-sm mr-3 text-primary font-weight-bold"><i class="fas fa-arrow-left"></i> Back</a>
+                    <a href="javascript:void(0);" onclick="window.location.replace('admin-view-vehicle.php')" class="btn btn-light btn-sm mr-3 text-primary font-weight-bold"><i class="fas fa-arrow-left"></i> Back</a>
                     <h4 class="font-weight-bold mb-0 flex-grow-1 text-center" style="margin-right: 60px;"><i class="fas fa-bus"></i> Add New Vehicle</h4>
                 </div>
                 <div class="card-body">
