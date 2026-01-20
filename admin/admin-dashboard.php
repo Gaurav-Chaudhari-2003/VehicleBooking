@@ -231,12 +231,6 @@ date_default_timezone_set("Asia/Kolkata");
                 overflow: hidden;
             }
 
-            .logout-drawer.active {
-                transform: translateY(8px) scale(1);
-                opacity: 1;
-                visibility: visible;
-            }
-
             .logout-drawer button {
                 border: none;
                 background: #f8f9fa;
@@ -366,7 +360,9 @@ date_default_timezone_set("Asia/Kolkata");
 <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
 <script>
     $(document).ready(function () {
-        const table = $('#dataTable').DataTable();
+        const table = $('#dataTable').DataTable({
+            "order": [[ 0, "desc" ]] // Sort by 'Booked ID' column (index 0) descending by default
+        });
 
         function fetchData() {
             $.ajax({
@@ -405,7 +401,7 @@ date_default_timezone_set("Asia/Kolkata");
                         // Updated to use new schema column names from fetch-dashboard-data.php
                         const fromDate = new Date(row.from_datetime).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
                         const toDate = new Date(row.to_datetime).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                        
+
                         const bookedOn = new Date(row.created_at).toLocaleString('en-GB', { 
                             day: '2-digit', 
                             month: 'short', 

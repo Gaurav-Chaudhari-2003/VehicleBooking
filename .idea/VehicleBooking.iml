@@ -38,5 +38,6 @@
     <orderEntry type="library" name="jquery.dataTables" level="application" />
     <orderEntry type="library" name="dataTables.bootstrap5" level="application" />
     <orderEntry type="library" name="jquery-3.7.1" level="application" />
+    <orderEntry type="library" name="clockpicker" level="application" />
   </component>
 </module>
