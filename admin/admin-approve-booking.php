@@ -571,7 +571,7 @@ if (isset($_POST['approve_booking'])) {
                                                 <div class="col-md-5 border-right">
                                                     <div class="form-group mb-0 h-100">
                                                         <label class="small font-weight-bold mb-1">Admin Remarks</label>
-                                                        <textarea name="admin_remarks" class="form-control form-control-sm h-75" placeholder="Enter any remarks or notes for this booking..."></textarea>
+                                                        <textarea name="admin_remarks" class="form-control form-control-sm h-75" placeholder="Enter any remarks or notes for this booking..." required></textarea>
                                                     </div>
                                                 </div>
 
