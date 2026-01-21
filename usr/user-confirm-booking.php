@@ -1,4 +1,7 @@
 <?php
+
+use JetBrains\PhpStorm\NoReturn;
+
 session_start();
 
 require_once '../DATABASE FILE/config.php';
@@ -17,8 +20,31 @@ if (!isset($_POST['book_vehicle'])) {
 $user_id   = $_SESSION['u_id'];
 $vehicle_id = intval($_POST['v_id']);
 
-$from = $_POST['book_from_date'] . " 00:00:00";
-$to   = $_POST['book_to_date']   . " 23:59:59";
+function normalizeDateTime($input, $isEnd = false): string
+{
+    $input = trim($input);
+
+    // If only date is provided
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $input)) {
+        return $input . ($isEnd ? ' 23:59:59' : ' 00:00:00');
+    }
+
+    // If date + time (HH:MM)
+    if (preg_match('/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}$/', $input)) {
+        return $input . ':00';
+    }
+
+    // If HTML5 datetime-local format
+    if (str_contains($input, 'T')) {
+        return str_replace('T', ' ', $input) . ':00';
+    }
+
+    return $input; // fallback
+}
+
+$from = normalizeDateTime($_POST['book_from_date']);
+$to   = normalizeDateTime($_POST['book_to_date'], true);
+
 
 $pickup  = trim($_POST['pickup_location']);
 $drop    = trim($_POST['drop_location']);
@@ -34,6 +60,15 @@ if ($from > $to) {
 if (!$pickup || !$drop) {
     dieAlert("Pickup and Drop locations required");
 }
+
+if (strtotime($from) === false || strtotime($to) === false) {
+    dieAlert("Invalid date format");
+}
+
+if ($from >= $to) {
+    dieAlert("Invalid date range");
+}
+
 
 
 // -------- CONFLICT CHECK (ONLY APPROVED) --------
@@ -86,7 +121,9 @@ if ($stmt->execute()) {
 
 // -------- HELPERS --------
 
-function dieAlert($msg) {
+#[NoReturn]
+function dieAlert($msg): void
+{
     echo "<script>
         alert('$msg');
         window.location='usr-book-vehicle.php';
@@ -94,7 +131,9 @@ function dieAlert($msg) {
     exit;
 }
 
-function successAlert($msg) {
+#[NoReturn]
+function successAlert($msg): void
+{
     echo "<script>
         alert('$msg');
         window.location='user-dashboard.php';

@@ -30,7 +30,7 @@ if (isset($_POST['approve_booking'])) {
     $to_datetime = $_POST['to_datetime'];
 
     // Simple check if it's just a date (length 10: YYYY-MM-DD)
-    if (strlen($from_datetime) == 10) $from_datetime .= ' 00:00:00';
+    // if (strlen($from_datetime) == 10) $from_datetime .= ' 00:00:00'; // Removed: Admin now selects time
     if (strlen($to_datetime) == 10) $to_datetime .= ' 23:59:59'; // Assuming 'To' implies the inclusive end of day
 
     $pickup_location = $_POST['pickup_location'];
@@ -310,6 +310,13 @@ if (isset($_POST['approve_booking'])) {
 <?php include('vendor/inc/head.php'); ?>
 <!-- Flatpickr CSS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<!-- Leaflet Control Geocoder CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+<!-- Leaflet Routing Machine CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+
 <style>
     /* Custom styles for Flatpickr */
     .flatpickr-day.pending {
@@ -333,6 +340,23 @@ if (isset($_POST['approve_booking'])) {
     .driver-option-busy {
         background-color: #ffebee;
         color: #c62828;
+    }
+    
+    /* Map Styles */
+    .map-container {
+        height: 300px;
+        width: 100%;
+        border-radius: 8px;
+        margin-bottom: 15px;
+    }
+    
+    .input-group-text {
+        cursor: pointer;
+    }
+    
+    /* Hide default routing container if we want custom display */
+    .leaflet-routing-container {
+        display: none !important;
     }
 </style>
 
@@ -440,7 +464,7 @@ if (isset($_POST['approve_booking'])) {
                                             <div class="row">
                                                 <div class="col-md-5 border-right">
                                                     <div class="d-flex mb-3">
-                                                        <img src="<?php echo $vehicleImage; ?>" class="rounded mr-3" style="width: 80px; height: 60px; object-fit: cover;">
+                                                        <img src="<?php echo $vehicleImage; ?>" class="rounded mr-3" style="width: 300px; height: 140px; object-fit: cover;" alt="vehicle image">
                                                         <div>
                                                             <div class="font-weight-bold text-dark"><?php echo $row->v_name; ?></div>
                                                             <div class="small text-muted"><?php echo $row->v_reg_no; ?></div>
@@ -457,7 +481,7 @@ if (isset($_POST['approve_booking'])) {
                                                     <div class="row small mb-2">
                                                         <div class="col-6">
                                                             <label class="text-muted mb-0 font-weight-bold">From</label>
-                                                            <input type="text" id="from_datetime" name="from_datetime" class="form-control form-control-sm book-from-date" value="<?php echo date('Y-m-d', strtotime($row->from_datetime)); ?>">
+                                                            <input type="text" id="from_datetime" name="from_datetime" class="form-control form-control-sm book-from-date" value="<?php echo date('Y-m-d H:i', strtotime($row->from_datetime)); ?>">
                                                         </div>
                                                         <div class="col-6">
                                                             <label class="text-muted mb-0 font-weight-bold">To</label>
@@ -468,11 +492,39 @@ if (isset($_POST['approve_booking'])) {
                                                     <div class="row small mb-2">
                                                         <div class="col-6">
                                                             <label class="text-muted mb-0 font-weight-bold">Pickup</label>
-                                                            <input type="text" name="pickup_location" class="form-control form-control-sm" value="<?php echo htmlspecialchars($row->pickup_location); ?>">
+                                                            <div class="input-group input-group-sm" onclick="openMap('pickup')">
+                                                                <div class="input-group-prepend">
+                                                                    <span class="input-group-text bg-success text-white"><i class="fas fa-map-marker-alt"></i></span>
+                                                                </div>
+                                                                <input type="text" id="pickup_location" name="pickup_location" class="form-control form-control-sm pickup-input" value="<?php echo htmlspecialchars($row->pickup_location); ?>" required placeholder="Click to select on map" readonly style="background-color: #fff; cursor: pointer;">
+                                                            </div>
                                                         </div>
                                                         <div class="col-6">
                                                             <label class="text-muted mb-0 font-weight-bold">Drop</label>
-                                                            <input type="text" name="drop_location" class="form-control form-control-sm" value="<?php echo htmlspecialchars($row->drop_location); ?>">
+                                                            <div class="input-group input-group-sm" onclick="openMap('drop')">
+                                                                <div class="input-group-prepend">
+                                                                    <span class="input-group-text bg-danger text-white"><i class="fas fa-map-marker-alt"></i></span>
+                                                                </div>
+                                                                <input type="text" id="drop_location" name="drop_location" class="form-control form-control-sm drop-input" value="<?php echo htmlspecialchars($row->drop_location); ?>" required placeholder="Click to select on map" readonly style="background-color: #fff; cursor: pointer;">
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <!-- Map Container (Initially Hidden) -->
+                                                    <div id="map-container" style="display:none; position: relative;" class="mb-3 mt-2">
+                                                        <div id="map" class="map-container"></div>
+                                                        
+                                                        <!-- Route Info -->
+                                                        <div id="route-info" class="alert alert-info text-center py-2 mb-2" style="display:none;">
+                                                            <i class="fas fa-route"></i> 
+                                                            <strong>Distance:</strong> <span class="route-dist">0 km</span> &nbsp;|&nbsp; 
+                                                            <i class="fas fa-car"></i> <strong>Est. Time:</strong> <span class="route-time">0 min</span>
+                                                        </div>
+
+                                                        <div class="text-center">
+                                                            <button type="button" class="btn btn-sm btn-secondary" onclick="hideMap()">
+                                                                <i class="fas fa-check"></i> Done / Close Map
+                                                            </button>
                                                         </div>
                                                     </div>
                                                     
@@ -554,6 +606,12 @@ if (isset($_POST['approve_booking'])) {
 <script src="vendor/js/swal.js"></script>
 <!-- Flatpickr JS -->
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Leaflet Control Geocoder JS -->
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+<!-- Leaflet Routing Machine JS -->
+<script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 
 <script>
     function validateApprove() {
@@ -584,6 +642,7 @@ if (isset($_POST['approve_booking'])) {
         let startFull = start;
         let endFull = end;
         
+        // If start is just a date, append time. If it already has time, leave it.
         if (start.length === 10) startFull += ' 00:00:00';
         if (end.length === 10) endFull += ' 23:59:59';
         
@@ -621,23 +680,25 @@ if (isset($_POST['approve_booking'])) {
         });
     }
 
-    function buildFlatpickrOptions(approvedRanges, pendingRanges, minDate) {
+    function buildFlatpickrOptions(approvedRanges, pendingRanges, minDate, enableTime = false) {
         // Admin override: No disabled dates
         // We still want to show the visual indicators (colors) but allow selection.
         // So we pass an empty array to 'disable'.
-        
-        const options = {
-            enableTime: false,
-            dateFormat: "Y-m-d",
+
+        return {
+            enableTime: enableTime,
+            dateFormat: enableTime ? "Y-m-d H:i" : "Y-m-d",
             minDate: minDate,
             disable: [], // Empty array = no disabled dates
-            onDayCreate: function(dObj, dStr, fp, dayElem) {
+            onDayCreate: function (dObj, dStr, fp, dayElem) {
                 const date = dayElem.dateObj;
                 const dateString = flatpickr.formatDate(date, "Y-m-d");
 
                 // Check if the date is in approved ranges
                 for (const range of approvedRanges) {
-                    if (dateString >= range.book_from_date && dateString <= range.book_to_date) {
+                    const rFrom = range.book_from_date.substring(0, 10);
+                    const rTo = range.book_to_date.substring(0, 10);
+                    if (dateString >= rFrom && dateString <= rTo) {
                         dayElem.classList.add("booked");
                         dayElem.title = "Car already booked and approved";
                         break;
@@ -646,7 +707,9 @@ if (isset($_POST['approve_booking'])) {
 
                 // Check if the date is in pending ranges
                 for (const range of pendingRanges) {
-                    if (dateString >= range.book_from_date && dateString <= range.book_to_date) {
+                    const rFrom = range.book_from_date.substring(0, 10);
+                    const rTo = range.book_to_date.substring(0, 10);
+                    if (dateString >= rFrom && dateString <= rTo) {
                         dayElem.classList.add("pending");
                         dayElem.title = "Car pending approval";
                         break;
@@ -654,8 +717,6 @@ if (isset($_POST['approve_booking'])) {
                 }
             }
         };
-
-        return options;
     }
 
     function initDatePickers() {
@@ -680,20 +741,20 @@ if (isset($_POST['approve_booking'])) {
             // Sort approvedRanges by date
             approvedRanges.sort((a, b) => new Date(a.book_from_date) - new Date(b.book_from_date));
 
-            const fromPicker = flatpickr(fromInput, buildFlatpickrOptions(approvedRanges, pendingRanges, minDateStr));
+            // Enable time for From Date picker
+            const fromPicker = flatpickr(fromInput, buildFlatpickrOptions(approvedRanges, pendingRanges, minDateStr, true));
             
-            // Initialize the To Date picker with similar options
-            // Note: Admin might want to override overlaps, but visual cues are helpful.
-            // We'll use the same logic but maybe less restrictive on 'disable' if admin needs to force.
-            // For now, keeping it consistent with the user view to prevent double booking errors.
-            
-            const toOptions = buildFlatpickrOptions(approvedRanges, pendingRanges, minDateStr);
+            // Initialize the To Date picker with similar options (no time)
+            const toOptions = buildFlatpickrOptions(approvedRanges, pendingRanges, minDateStr, false);
             const toPicker = flatpickr(toInput, toOptions);
 
             // Update To Date minDate when From Date changes
             fromPicker.config.onChange.push(function(selectedDates, dateStr) {
                 if (selectedDates.length > 0) {
-                    toPicker.set('minDate', dateStr);
+                    // Extract just the date part for minDate
+                    const dateOnly = dateStr.split(' ')[0];
+                    toPicker.set('minDate', dateOnly);
+
                     // Check driver availability when dates change
                     const toDate = toInput.value;
                     if (toDate) {
@@ -709,6 +770,230 @@ if (isset($_POST['approve_booking'])) {
                 }
             });
         });
+    }
+    
+    // --- Map Logic for Admin ---
+    let map = null;
+    let pickupMarker = null;
+    let dropMarker = null;
+    let pickupLatLng = null;
+    let dropLatLng = null;
+    let routingControl = null;
+    let mapSelectionStep = 'pickup';
+
+    function openMap(type) {
+        const mapContainer = document.getElementById('map-container');
+        mapContainer.style.display = 'block';
+        
+        mapSelectionStep = type;
+        
+        if (!map) {
+            initMap();
+        } else {
+            setTimeout(() => map.invalidateSize(), 100);
+        }
+    }
+    
+    function hideMap() {
+        document.getElementById('map-container').style.display = 'none';
+    }
+
+    function initMap() {
+        // Default to Colombo
+        const defaultLat = 6.9271;
+        const defaultLng = 79.8612;
+        
+        map = L.map('map').setView([defaultLat, defaultLng], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // Geocoder
+        L.Control.geocoder({
+            defaultMarkGeocode: false
+        })
+        .on('markgeocode', function(e) {
+            const bbox = e.geocode.bbox;
+            const poly = L.polygon([
+                bbox.getSouthEast(),
+                bbox.getNorthEast(),
+                bbox.getNorthWest(),
+                bbox.getSouthWest()
+            ]);
+            map.fitBounds(poly.getBounds());
+            
+            const latlng = e.geocode.center;
+            const address = e.geocode.name;
+            handleLocationSelection(latlng.lat, latlng.lng, address);
+        })
+        .addTo(map);
+
+        // Locate Me Control
+        L.Control.Locate = L.Control.extend({
+            onAdd: function(map) {
+                const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
+                container.style.backgroundColor = 'white';
+                container.style.width = '30px';
+                container.style.height = '30px';
+                container.style.cursor = 'pointer';
+                container.style.display = 'flex';
+                container.style.alignItems = 'center';
+                container.style.justifyContent = 'center';
+                container.title = "Jump to Current Location";
+
+                const icon = L.DomUtil.create('i', 'fas fa-crosshairs', container);
+                icon.style.fontSize = '18px';
+                icon.style.color = '#333';
+
+                container.onclick = function() {
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(
+                            (position) => {
+                                const lat = position.coords.latitude;
+                                const lng = position.coords.longitude;
+                                map.setView([lat, lng], 15);
+                            },
+                            (error) => {
+                                swal("Error", "Could not get your location: " + error.message, "error");
+                            }
+                        );
+                    } else {
+                        swal("Error", "Geolocation is not supported by this browser.", "error");
+                    }
+                }
+                return container;
+            },
+            onRemove: function(map) { }
+        });
+
+        L.control.locate = function(opts) {
+            return new L.Control.Locate(opts);
+        }
+        L.control.locate({ position: 'topleft' }).addTo(map);
+
+        // Try to get user location
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    map.setView([lat, lng], 15);
+                },
+                (error) => { console.log("Geolocation error: " + error.message); }
+            );
+        }
+
+        // Custom Icons
+        const greenIcon = new L.Icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+
+        const redIcon = new L.Icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+        
+        // Pre-populate markers if addresses exist (Geocoding would be needed for exact coords, 
+        // but here we just initialize map. If we wanted to show existing markers, we'd need lat/lng stored or geocode the address string)
+        // For now, we start fresh or let admin pick new points.
+
+        map.on('click', async function(e) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+            const coords = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+
+            let address = coords;
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                const data = await response.json();
+                if (data && data.display_name) {
+                    address = data.display_name;
+                }
+            } catch (error) {
+                console.error("Geocoding failed", error);
+            }
+            
+            handleLocationSelection(lat, lng, address);
+        });
+        
+        function handleLocationSelection(lat, lng, address) {
+            const pickupInput = document.getElementById('pickup_location');
+            const dropInput = document.getElementById('drop_location');
+
+             if (mapSelectionStep === 'pickup') {
+                if (pickupMarker) map.removeLayer(pickupMarker);
+                pickupMarker = L.marker([lat, lng], {icon: greenIcon}).addTo(map)
+                    .bindPopup("Pickup Location: " + address).openPopup();
+                pickupInput.value = address;
+                pickupLatLng = L.latLng(lat, lng);
+                
+                updateRoute();
+                hideMap(); // Auto close for pickup
+                
+            } else {
+                if (dropMarker) map.removeLayer(dropMarker);
+                dropMarker = L.marker([lat, lng], {icon: redIcon}).addTo(map)
+                    .bindPopup("Drop Location: " + address).openPopup();
+                dropInput.value = address;
+                dropLatLng = L.latLng(lat, lng);
+                
+                updateRoute();
+                // Don't auto close for drop
+            }
+        }
+        
+        function updateRoute() {
+            if (pickupLatLng && dropLatLng) {
+                if (routingControl) {
+                    map.removeControl(routingControl);
+                }
+
+                routingControl = L.Routing.control({
+                    waypoints: [
+                        pickupLatLng,
+                        dropLatLng
+                    ],
+                    routeWhileDragging: false,
+                    createMarker: function() { return null; },
+                    addWaypoints: false,
+                    fitSelectedRoutes: true,
+                    show: false
+                }).on('routesfound', function(e) {
+                    var routes = e.routes;
+                    var summary = routes[0].summary;
+                    
+                    const distKm = (summary.totalDistance / 1000).toFixed(1);
+                    
+                    const totalSeconds = summary.totalTime;
+                    const hours = Math.floor(totalSeconds / 3600);
+                    const minutes = Math.round((totalSeconds % 3600) / 60);
+                    
+                    let timeString = "";
+                    if (hours > 0) {
+                        timeString += hours + " hr " + minutes + " min";
+                    } else {
+                        timeString += minutes + " min";
+                    }
+                    
+                    const infoDiv = document.getElementById('route-info');
+                    infoDiv.style.display = 'block';
+                    infoDiv.querySelector('.route-dist').innerText = distKm + " km";
+                    infoDiv.querySelector('.route-time').innerText = timeString;
+                    
+                }).addTo(map);
+            }
+        }
+
     }
 
     document.addEventListener('DOMContentLoaded', function() {

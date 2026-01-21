@@ -37,6 +37,12 @@ if ($aid) {
     <!-- Flatpickr CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet Control Geocoder CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <!-- Leaflet Routing Machine CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
 
     <style>
         .vehicle-img {
@@ -83,6 +89,23 @@ if ($aid) {
             color: #aaaaaa !important;
             border-color: #e0e0e0 !important;
             cursor: not-allowed;
+        }
+        
+        /* Map Styles */
+        .map-container {
+            height: 300px;
+            width: 100%;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .input-group-text {
+            cursor: pointer;
+        }
+        
+        /* Hide default routing container if we want custom display */
+        .leaflet-routing-container {
+            display: none !important;
         }
     </style>
 </head>
@@ -135,7 +158,7 @@ if ($aid) {
                     <!-- Modal -->
                     <div class="modal fade" id="bookModal<?php echo $row->id; ?>" tabindex="-1"
                          aria-labelledby="bookModalLabel<?php echo $row->id; ?>" aria-hidden="true">
-                        <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-dialog modal-dialog-centered modal-lg">
                             <div class="modal-content border-0 shadow-lg rounded-4">
                                 <form method="POST" action="user-confirm-booking.php" onsubmit="return validateBookingDates(this);">
                                     <div class="modal-header bg-warning text-dark rounded-top-4">
@@ -154,14 +177,18 @@ if ($aid) {
 
                                         <div class="row">
                                             <div class="col-6 mb-3">
-                                                <label for="book_from_date<?= $row->id; ?>" class="form-label">From
-                                                    Date</label>
-                                                <input type="date" onkeydown="return false;" id="book_from_date<?= $row->id; ?>" name="book_from_date" class="form-control book-from-date" required>
+                                                <label for="book_from_date<?= $row->id; ?>" class="form-label">From Date</label>
+                                                <div class="input-group">
+                                                    <input type="text" onkeydown="return false;" id="book_from_date<?= $row->id; ?>" name="book_from_date" class="form-control book-from-date" required placeholder="Select Date & Time">
+                                                    <button type="button" class="btn btn-outline-secondary date-picker-btn"><i class="fa fa-calendar-alt"></i></button>
+                                                </div>
                                             </div>
                                             <div class="col-6 mb-3">
-                                                <label for="book_to_date<?= $row->id; ?>" class="form-label">To
-                                                    Date</label>
-                                                <input type="date" onkeydown="return false;" id="book_to_date<?= $row->id; ?>" name="book_to_date" class="form-control book-to-date" required>
+                                                <label for="book_to_date<?= $row->id; ?>" class="form-label">To Date</label>
+                                                <div class="input-group">
+                                                    <input type="text" onkeydown="return false;" id="book_to_date<?= $row->id; ?>" name="book_to_date" class="form-control book-to-date" required placeholder="Select Date">
+                                                    <button type="button" class="btn btn-outline-secondary date-picker-btn"><i class="fa fa-calendar-alt"></i></button>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -169,11 +196,35 @@ if ($aid) {
                                         <div class="row">
                                             <div class="col-6 mb-3">
                                                 <label for="pickup_location<?= $row->id; ?>" class="form-label">Pickup Location</label>
-                                                <input type="text" id="pickup_location<?= $row->id; ?>" name="pickup_location" class="form-control" required placeholder="Enter pickup location">
+                                                <div class="input-group" onclick="openMap(<?= $row->id; ?>, 'pickup')">
+                                                    <span class="input-group-text bg-success text-white"><i class="fa fa-map-marker-alt"></i></span>
+                                                    <input type="text" id="pickup_location<?= $row->id; ?>" name="pickup_location" class="form-control pickup-input" required placeholder="Click to select on map" readonly style="background-color: #fff; cursor: pointer;">
+                                                </div>
                                             </div>
                                             <div class="col-6 mb-3">
                                                 <label for="drop_location<?= $row->id; ?>" class="form-label">Drop Location</label>
-                                                <input type="text" id="drop_location<?= $row->id; ?>" name="drop_location" class="form-control" required placeholder="Enter drop location">
+                                                <div class="input-group" onclick="openMap(<?= $row->id; ?>, 'drop')">
+                                                    <span class="input-group-text bg-danger text-white"><i class="fa fa-map-marker-alt"></i></span>
+                                                    <input type="text" id="drop_location<?= $row->id; ?>" name="drop_location" class="form-control drop-input" required placeholder="Click to select on map" readonly style="background-color: #fff; cursor: pointer;">
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Map Container (Initially Hidden) -->
+                                        <div id="map-container-<?= $row->id; ?>" style="display:none; position: relative;" class="mb-3">
+                                            <div id="map<?= $row->id; ?>" class="map-container"></div>
+                                            
+                                            <!-- Route Info -->
+                                            <div id="route-info-<?= $row->id; ?>" class="alert alert-info text-center py-2 mb-2" style="display:none;">
+                                                <i class="fas fa-route"></i> 
+                                                <strong>Distance:</strong> <span class="route-dist">0 km</span> &nbsp;|&nbsp; 
+                                                <i class="fas fa-car"></i> <strong>Est. Time:</strong> <span class="route-time">0 min</span>
+                                            </div>
+
+                                            <div class="text-center">
+                                                <button type="button" class="btn btn-sm btn-secondary" onclick="hideMap(<?= $row->id; ?>)">
+                                                    <i class="fa fa-check"></i> Done / Close Map
+                                                </button>
                                             </div>
                                         </div>
 
@@ -249,6 +300,13 @@ if ($aid) {
 <!-- Flatpickr JS -->
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Leaflet Control Geocoder JS -->
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+<!-- Leaflet Routing Machine JS -->
+<script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+
 <script>
     async function fetchBookedDates(vehicleId) {
         const res = await fetch(`get-approved-dates.php?v_id=${vehicleId}`);
@@ -281,7 +339,9 @@ if ($aid) {
 
                 // Check if date is in approved ranges
                 for (const range of approvedRanges) {
-                    if (dateString >= range.book_from_date && dateString <= range.book_to_date) {
+                    const rFrom = range.book_from_date.substring(0, 10);
+                    const rTo = range.book_to_date.substring(0, 10);
+                    if (dateString >= rFrom && dateString <= rTo) {
                         dayElem.classList.add("booked");
                         dayElem.title = "Car already booked and approved to another person for this dates"; // Add tooltip
                         break;
@@ -290,7 +350,9 @@ if ($aid) {
 
                 // Check if date is in pending ranges
                 for (const range of pendingRanges) {
-                    if (dateString >= range.book_from_date && dateString <= range.book_to_date) {
+                    const rFrom = range.book_from_date.substring(0, 10);
+                    const rTo = range.book_to_date.substring(0, 10);
+                    if (dateString >= rFrom && dateString <= rTo) {
                         dayElem.classList.add("pending");
                         dayElem.title = "Car already choose by another person for this dates, but not approved."; // Add tooltip
                         break;
@@ -322,7 +384,16 @@ if ($aid) {
             // Sort approvedRanges by date
             approvedRanges.sort((a, b) => new Date(a.book_from_date) - new Date(b.book_from_date));
 
-            const fromPicker = flatpickr(fromInput, buildFlatpickrOptions(approvedRanges, pendingRanges, minDateStr));
+            const fromOptions = buildFlatpickrOptions(approvedRanges, pendingRanges, minDateStr);
+            fromOptions.enableTime = true;
+            fromOptions.dateFormat = "Y-m-d H:i";
+            const fromPicker = flatpickr(fromInput, fromOptions);
+            
+            // Attach click event to the calendar button
+            const fromBtn = fromInput.nextElementSibling;
+            if(fromBtn) {
+                fromBtn.addEventListener('click', () => fromPicker.open());
+            }
 
             // Ensure when 'From Date' changes, 'To Date' is enabled
             fromPicker.config.onChange.push(function(selectedDates, dateStr) {
@@ -343,7 +414,9 @@ if ($aid) {
                     }
 
                     // Build options for To Date
-                    const toOptions = buildFlatpickrOptions(approvedRanges, pendingRanges, dateStr);
+                    // Use date part only for minDate to allow same-day drop off
+                    const dateOnlyStr = dateStr.split(' ')[0];
+                    const toOptions = buildFlatpickrOptions(approvedRanges, pendingRanges, dateOnlyStr);
 
                     if (nextBookingStart) {
                         // Calculate maxDate = nextBookingStart - 1 day
@@ -364,15 +437,268 @@ if ($aid) {
                     };
 
                     // Initialize To Date picker
-                    flatpickr(toInput, toOptions);
+                    const toPicker = flatpickr(toInput, toOptions);
+                    
+                    // Attach click event to the calendar button
+                    const toBtn = toInput.nextElementSibling;
+                    if(toBtn) {
+                        toBtn.addEventListener('click', () => toPicker.open());
+                    }
                 }
             });
         });
     }
 
+    // Map Initialization Logic
+    let maps = {}; // Store map instances
+
+    function openMap(vehicleId, type) {
+        const mapContainer = document.getElementById(`map-container-${vehicleId}`);
+        mapContainer.style.display = 'block';
+        
+        if (!maps[vehicleId]) {
+            initMap(vehicleId, type);
+        } else {
+            maps[vehicleId].selectionStep = type;
+            setTimeout(() => maps[vehicleId].invalidateSize(), 100);
+
+        }
+    }
+    
+    function hideMap(vehicleId) {
+        const mapContainer = document.getElementById(`map-container-${vehicleId}`);
+        mapContainer.style.display = 'none';
+    }
+
+    function initMap(vehicleId, initialType) {
+        const mapContainerId = `map${vehicleId}`;
+        const modal = document.getElementById(`bookModal${vehicleId}`);
+        
+        // Default to Colombo
+        const defaultLat = 6.9271;
+        const defaultLng = 79.8612;
+        
+        const map = L.map(mapContainerId).setView([defaultLat, defaultLng], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // Add Geocoder Control
+        const geocoder = L.Control.geocoder({
+            defaultMarkGeocode: false
+        })
+        .on('markgeocode', function(e) {
+            const bbox = e.geocode.bbox;
+            const poly = L.polygon([
+                bbox.getSouthEast(),
+                bbox.getNorthEast(),
+                bbox.getNorthWest(),
+                bbox.getSouthWest()
+            ]);
+            map.fitBounds(poly.getBounds());
+            
+            // Trigger selection logic for the found location
+            const latlng = e.geocode.center;
+            const address = e.geocode.name;
+            handleLocationSelection(latlng.lat, latlng.lng, address);
+        })
+        .addTo(map);
+
+        // Create a custom control for "Locate Me"
+        L.Control.Locate = L.Control.extend({
+            onAdd: function(map) {
+                const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
+                container.style.backgroundColor = 'white';
+                container.style.width = '30px';
+                container.style.height = '30px';
+                container.style.cursor = 'pointer';
+                container.style.display = 'flex';
+                container.style.alignItems = 'center';
+                container.style.justifyContent = 'center';
+                container.title = "Jump to Current Location";
+
+                const icon = L.DomUtil.create('i', 'fas fa-crosshairs', container);
+                icon.style.fontSize = '18px';
+                icon.style.color = '#333';
+
+                container.onclick = function() {
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(
+                            (position) => {
+                                const lat = position.coords.latitude;
+                                const lng = position.coords.longitude;
+                                map.setView([lat, lng], 15);
+                            },
+                            (error) => {
+                                swal("Error", "Could not get your location: " + error.message, "error");
+                            }
+                        );
+                    } else {
+                        swal("Error", "Geolocation is not supported by this browser.", "error");
+                    }
+                }
+                return container;
+            },
+            onRemove: function(map) {
+                // Nothing to do here
+            }
+        });
+
+        L.control.locate = function(opts) {
+            return new L.Control.Locate(opts);
+        }
+
+        L.control.locate({ position: 'topleft' }).addTo(map);
+
+        // Try to get user location
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    map.setView([lat, lng], 15);
+                },
+                (error) => {
+                    console.log("Geolocation permission denied or error: " + error.message);
+                }
+            );
+        }
+
+        let pickupMarker = null;
+        let dropMarker = null;
+        let pickupLatLng = null;
+        let dropLatLng = null;
+        let routingControl = null;
+        
+        // Store selection step on the map object
+        map.selectionStep = initialType;
+
+        const pickupInput = modal.querySelector('.pickup-input');
+        const dropInput = modal.querySelector('.drop-input');
+
+        // Custom Icons
+        const greenIcon = new L.Icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+
+        const redIcon = new L.Icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+        
+        function updateRoute() {
+            if (pickupLatLng && dropLatLng) {
+                if (routingControl) {
+                    map.removeControl(routingControl);
+                }
+
+                routingControl = L.Routing.control({
+                    waypoints: [
+                        pickupLatLng,
+                        dropLatLng
+                    ],
+                    routeWhileDragging: false,
+                    createMarker: function() { return null; }, // Use our own markers
+                    addWaypoints: false, // Disable adding new waypoints
+                    fitSelectedRoutes: true,
+                    show: false // Hide the default itinerary container
+                }).on('routesfound', function(e) {
+                    var routes = e.routes;
+                    var summary = routes[0].summary;
+                    // summary.totalDistance is in meters
+                    // summary.totalTime is in seconds
+                    
+                    const distKm = (summary.totalDistance / 1000).toFixed(1);
+                    
+                    // Format time as X hr Y min
+                    const totalSeconds = summary.totalTime;
+                    const hours = Math.floor(totalSeconds / 3600);
+                    const minutes = Math.round((totalSeconds % 3600) / 60);
+                    
+                    let timeString = "";
+                    if (hours > 0) {
+                        timeString += hours + " hr " + minutes + " min";
+                    } else {
+                        timeString += minutes + " min";
+                    }
+                    
+                    // Update UI
+                    const infoDiv = document.getElementById(`route-info-${vehicleId}`);
+                    infoDiv.style.display = 'block';
+                    infoDiv.querySelector('.route-dist').innerText = distKm + " km";
+                    infoDiv.querySelector('.route-time').innerText = timeString;
+                    
+                }).addTo(map);
+            }
+        }
+        
+        // Helper function to handle selection (reused by click and search)
+        function handleLocationSelection(lat, lng, address) {
+             if (map.selectionStep === 'pickup') {
+                if (pickupMarker) map.removeLayer(pickupMarker);
+                pickupMarker = L.marker([lat, lng], {icon: greenIcon}).addTo(map)
+                    .bindPopup("Pickup Location: " + address).openPopup();
+                pickupInput.value = address;
+                pickupLatLng = L.latLng(lat, lng);
+                
+                // Update route (in case drop is already set)
+                updateRoute();
+                
+                // Auto close map for pickup
+                hideMap(vehicleId);
+                
+            } else {
+                if (dropMarker) map.removeLayer(dropMarker);
+                dropMarker = L.marker([lat, lng], {icon: redIcon}).addTo(map)
+                    .bindPopup("Drop Location: " + address).openPopup();
+                dropInput.value = address;
+                dropLatLng = L.latLng(lat, lng);
+                
+                // Update route
+                updateRoute();
+                
+                // Don't auto close for drop
+            }
+        }
+
+        map.on('click', async function(e) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+            const coords = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+
+            // Reverse Geocoding
+            let address = coords;
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                const data = await response.json();
+                if (data && data.display_name) {
+                    address = data.display_name;
+                }
+            } catch (error) {
+                console.error("Geocoding failed", error);
+            }
+            
+            handleLocationSelection(lat, lng, address);
+        });
+
+        maps[vehicleId] = map;
+
+    }
+
     document.querySelectorAll('.modal').forEach(modal => {
         modal.addEventListener('shown.bs.modal', function () {
             setDateLimits(modal);
+            // Map is now initialized on click, not on show
         });
     });
 
@@ -385,7 +711,7 @@ if ($aid) {
             return false;
         }
 
-        if (new Date(fromDate) > new Date(toDate)) {
+        if (new Date(fromDate) > new Date(toDate + " 23:59:59")) {
             swal("Error", "The 'From Date' cannot be later than the 'To Date'.", "error");
             return false;
         }

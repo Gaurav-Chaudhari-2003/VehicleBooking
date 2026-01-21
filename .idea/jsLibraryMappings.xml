@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="JavaScriptLibraryMappings">
-    <file url="PROJECT" libraries="{@fortawesome/fontawesome-free, bootstrap, bootstrap.bundle, clockpicker, dataTables.bootstrap5, font-awesome, jquery, jquery-3.6.0, jquery-3.7.0, jquery-3.7.1, jquery.dataTables, sweetalert, sweetalert2, toastr, w3}" />
+    <file url="PROJECT" libraries="{@fortawesome/fontawesome-free, bootstrap, bootstrap.bundle, clockpicker, dataTables.bootstrap5, font-awesome, jquery, jquery-3.6.0, jquery-3.7.0, jquery-3.7.1, jquery.dataTables, leaflet, leaflet-control-geocoder, leaflet-routing-machine, sweetalert, sweetalert2, toastr, w3}" />
   </component>
 </project>
