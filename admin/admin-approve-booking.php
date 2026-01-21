@@ -903,9 +903,50 @@ if (isset($_POST['approve_booking'])) {
             shadowSize: [41, 41]
         });
         
-        // Pre-populate markers if addresses exist (Geocoding would be needed for exact coords, 
-        // but here we just initialize map. If we wanted to show existing markers, we'd need lat/lng stored or geocode the address string)
-        // For now, we start fresh or let admin pick new points.
+        // Pre-populate markers if addresses exist
+        const initialPickup = document.getElementById('pickup_location').value;
+        const initialDrop = document.getElementById('drop_location').value;
+        
+        if (initialPickup) {
+            geocodeAndSetMarker(initialPickup, 'pickup');
+        }
+        if (initialDrop) {
+            geocodeAndSetMarker(initialDrop, 'drop');
+        }
+        
+        async function geocodeAndSetMarker(address, type) {
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`);
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    const lat = parseFloat(data[0].lat);
+                    const lng = parseFloat(data[0].lon);
+                    
+                    if (type === 'pickup') {
+                        if (pickupMarker) map.removeLayer(pickupMarker);
+                        pickupMarker = L.marker([lat, lng], {icon: greenIcon}).addTo(map)
+                            .bindPopup("Pickup Location: " + address);
+                        pickupLatLng = L.latLng(lat, lng);
+                    } else {
+                        if (dropMarker) map.removeLayer(dropMarker);
+                        dropMarker = L.marker([lat, lng], {icon: redIcon}).addTo(map)
+                            .bindPopup("Drop Location: " + address);
+                        dropLatLng = L.latLng(lat, lng);
+                    }
+                    
+                    // If both are set, update route and fit bounds
+                    if (pickupLatLng && dropLatLng) {
+                        updateRoute();
+                        const bounds = L.latLngBounds([pickupLatLng, dropLatLng]);
+                        map.fitBounds(bounds, { padding: [50, 50] });
+                    } else if (pickupLatLng) {
+                        map.setView(pickupLatLng, 13);
+                    }
+                }
+            } catch (error) {
+                console.error("Geocoding failed for " + type, error);
+            }
+        }
 
         map.on('click', async function(e) {
             const lat = e.latlng.lat;
