@@ -25,6 +25,7 @@
             if (strlen($book_to_date) == 10) $book_to_date .= ' 23:59:59';
 
             $query="INSERT INTO bookings (user_id, vehicle_id, from_datetime, to_datetime, pickup_location, drop_location, purpose, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            global $mysqli;
             $stmt = $mysqli->prepare($query);
             $stmt->bind_param('iissssss', $u_id, $vehicle_id, $book_from_date, $book_to_date, $pickup_location, $drop_location, $purpose, $status);
             
@@ -55,9 +56,6 @@
 <?php include('vendor/inc/head.php');?>
 
 <body id="page-top">
- <!--Start Navigation Bar-->
-  <?php include("vendor/inc/nav.php");?>
-  <!--Navigation Bar-->
 
   <div id="wrapper">
 

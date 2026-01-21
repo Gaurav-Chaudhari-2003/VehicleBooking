@@ -79,71 +79,128 @@ date_default_timezone_set("Asia/Kolkata");
     <meta charset="UTF-8">
     <title>Admin Dashboard - Vehicle Booking System</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome -->
-    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+    
+    <!-- Include Global Theme -->
+    <?php include("../vendor/inc/theme-config.php"); ?>
+    
     <!-- DataTables CSS -->
     <link href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    
     <style>
         body {
-            background: linear-gradient(135deg, #e0f7fa, #f8f9fa);
-            font-family: 'Segoe UI', sans-serif;
+            background-color: #fff; /* Override theme background for a cleaner dashboard */
         }
-        .hover-translate {
-            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-            cursor: pointer; /* Indicate clickable */
+        
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
         }
-        .hover-translate:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 6px 16px rgba(0,0,0,0.08);
-        }
-        .card {
-            border-radius: 1rem;
-        }
-        .dashboard-header {
+        
+        /* Sidebar styles are now in sidebar.php */
+        
+        .content-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 30px;
         }
-        .profile-card {
-            background-color: #fff;
-            border: 1px solid #dee2e6;
-            border-radius: 50px;
-            padding: 10px 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        
+        .profile-dropdown {
             cursor: pointer;
         }
         
-        /* Custom Stats Styling */
-        .stats-container {
-            display: flex;
-            justify-content: space-around;
-            padding: 15px 0;
-        }
-        .stat-box {
-            text-align: center;
-            padding: 10px 20px;
+        .profile-dropdown .dropdown-menu {
             border-radius: 10px;
-            background-color: #f8f9fa;
-            min-width: 100px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border: none;
         }
-        .stat-number {
+        
+        /* Stats Cards */
+        .stat-card {
+            background: #fff;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
+            height: 100%;
+            border: none;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 1.5rem;
-            font-weight: bold;
-            display: block;
+            margin-bottom: 15px;
         }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #333;
+            line-height: 1;
+            margin-bottom: 5px;
+        }
+        
         .stat-label {
-            font-size: 0.85rem;
-            color: #6c757d;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            color: #666;
+            font-size: 0.9rem;
+            font-weight: 500;
         }
-        .text-primary-custom { color: #0d6efd; }
-        .text-success-custom { color: #198754; }
-        .text-info-custom { color: #0dcaf0; }
-        .text-warning-custom { color: #ffc107; }
+        
+        /* Table Styling */
+        .table-card {
+            background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border: none;
+            overflow: hidden;
+        }
+        
+        .table-card .card-header {
+            background: #fff;
+            border-bottom: 1px solid #eee;
+            padding: 20px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        
+        .table thead th {
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #eee;
+            color: #555;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+        
+        .badge {
+            padding: 6px 10px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 0.75rem;
+        }
+        
+        .bg-warning { background-color: #fff3cd !important; color: #856404; }
+        .bg-success { background-color: #d1e7dd !important; color: #0f5132; }
+        .bg-danger { background-color: #f8d7da !important; color: #842029; }
+        .bg-secondary { background-color: #e2e3e5 !important; color: #41464b; }
+        
+        /* Colors for stats */
+        .icon-primary { background-color: #e3f2fd; color: #0d6efd; }
+        .icon-success { background-color: #d1e7dd; color: #198754; }
+        .icon-info { background-color: #cff4fc; color: #0dcaf0; }
+        .icon-warning { background-color: #fff3cd; color: #ffc107; }
+        .icon-purple { background-color: #e0cffc; color: #6f42c1; }
     </style>
+    
     <script>
         // Force browser back button to redirect to project homepage
         history.pushState(null, null, location.href);
@@ -153,215 +210,128 @@ date_default_timezone_set("Asia/Kolkata");
     </script>
 </head>
 <body>
-<div class="container py-4">
-    <!-- Header -->
-    <div class="dashboard-header mb-4">
-        <div>
-            <h2 class="fw-bold text-dark mb-1">Admin Dashboard</h2>
-            <p class="text-muted mb-0">Manage the Vehicle Booking System efficiently</p>
-        </div>
-        <!-- Profile Card with Logout Dropdown -->
-        <div class="profile-container">
-            <div class="profile-card d-flex align-items-center justify-content-between gap-3 hover-translate p-2 bg-white rounded-3 shadow-sm" id="profileToggle">
-                <div class="d-flex align-items-center gap-3">
-                    <i class="fas fa-user-shield fa-2x text-primary"></i>
-                    <div>
-                        <h6 class="mb-0 text-dark"><?= htmlspecialchars($admin->a_name ?? 'Admin'); ?></h6>
-                        <small class="text-muted"><?= htmlspecialchars($admin->a_email ?? ''); ?></small>
+
+<div class="dashboard-container">
+    <!-- Sidebar -->
+    <?php include("vendor/inc/sidebar.php"); ?>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="content-header">
+            <div>
+                <h2 class="fw-bold text-dark mb-0">Dashboard Overview</h2>
+                <p class="text-muted mb-0">Welcome back, <?php echo htmlspecialchars($admin->a_name); ?></p>
+            </div>
+            
+            <div class="dropdown profile-dropdown">
+                <div class="d-flex align-items-center" data-bs-toggle="dropdown">
+                    <div class="text-end me-3 d-none d-md-block">
+                        <h6 class="mb-0 text-dark fw-semibold"><?php echo htmlspecialchars($admin->a_name); ?></h6>
+                        <small class="text-muted">Administrator</small>
+                    </div>
+                    <div class="bg-white rounded-circle shadow-sm p-1">
+                        <i class="fas fa-user-shield fa-2x text-primary"></i>
                     </div>
                 </div>
-                <!-- ▼ Arrow Icon to suggest dropdown -->
-                <i id="profileArrow" class="fas fa-chevron-down text-muted transition"></i>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                        <form method="post" class="m-0">
+                            <button type="submit" name="logout" class="dropdown-item text-danger">
+                                <i class="fas fa-sign-out-alt me-2"></i> Logout
+                            </button>
+                        </form>
+                    </li>
+                </ul>
             </div>
-
-            <!-- Logout Drawer -->
-            <div id="logoutDrawer" class="logout-drawer">
-                <form method="post" class="m-0">
-                    <button type="submit" name="logout">Logout</button>
-                </form>
-            </div>
-
         </div>
-
-
-        <style>
-            .profile-container {
-                position: relative;
-                width: fit-content;
-                z-index: 10;
-                cursor: pointer;
-            }
-
-            .profile-card {
-                position: relative;
-                z-index: 20;
-                transition: box-shadow 0.3s;
-            }
-
-            /* Glow on hover to hint interaction */
-            .profile-card:hover {
-                box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
-            }
-
-            /* Arrow animation */
-            #profileArrow {
-                transition: transform 0.3s ease;
-            }
-
-            .logout-drawer.active + #profileArrow {
-                transform: rotate(180deg);
-            }
-
-            /* Logout drawer (unchanged from before) */
-            .logout-drawer {
-                position: absolute;
-                top: 100%;
-                right: 0;
-                margin-top: -8px;
-                background: #fff;
-                border: 1px solid #ddd;
-                border-radius: 0.75rem;
-                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-                width: 100%;
-                transform: translateY(-20px) scale(0.95);
-                opacity: 0;
-                visibility: hidden;
-                transition: opacity 0.3s ease, transform 0.3s ease;
-                z-index: 5;
-                overflow: hidden;
-            }
-
-            .logout-drawer button {
-                border: none;
-                background: #f8f9fa;
-                width: 100%;
-                padding: 10px;
-                font-weight: 500;
-                border-radius: 0.75rem;
-                transition: background 0.3s;
-            }
-
-            .logout-drawer button:hover {
-                background: #dc3545;
-                color: #fff;
-            }
-
-        </style>
-
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                const toggle = document.getElementById('profileToggle');
-                const drawer = document.getElementById('logoutDrawer');
-                const arrow = document.getElementById('profileArrow');
-
-                toggle.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    drawer.classList.toggle('active');
-                    arrow.classList.toggle('rotated');
-                });
-
-                document.addEventListener('click', function (e) {
-                    if (!toggle.contains(e.target) && !drawer.contains(e.target)) {
-                        drawer.classList.remove('active');
-                        arrow.classList.remove('rotated');
-                    }
-                });
-            });
-
-        </script>
-
-
-
-
-
-    </div>
-
-    <!-- Dashboard Cards -->
-    <div class="row g-4">
-        <!-- Users Card -->
-        <div class="col-md-6">
-            <div class="card text-center hover-translate shadow-sm h-100" onclick="window.location.replace('admin-view-user.php')">
-                <div class="card-body">
-                    <h5 class="card-title mb-3"><i class="fas fa-users text-primary me-2"></i> System Users</h5>
-                    
-                    <div class="stats-container">
-                        <div class="stat-box">
-                            <span class="stat-number text-primary-custom" id="employee-count"><?= $employee_count; ?></span>
-                            <span class="stat-label">Employees</span>
-                        </div>
-                        <div class="stat-box">
-                            <span class="stat-number text-success-custom" id="driver-count"><?= $driver_count; ?></span>
-                            <span class="stat-label">Drivers</span>
-                        </div>
-                        <div class="stat-box">
-                            <span class="stat-number text-info-custom" id="manager-count"><?= $manager_count; ?></span>
-                            <span class="stat-label">Managers</span>
-                        </div>
-                        <div class="stat-box">
-                            <span class="stat-number text-warning-custom" id="admin-count"><?= $admin_count; ?></span>
-                            <span class="stat-label">Admins</span>
-                        </div>
+        
+        <!-- Stats Grid -->
+        <div class="row g-4 mb-5">
+            <div class="col-md-3">
+                <div class="stat-card" onclick="window.location.href='admin-view-user.php'" style="cursor: pointer;">
+                    <div class="stat-icon icon-primary">
+                        <i class="fas fa-user-tie"></i>
                     </div>
+                    <div class="stat-value"><?= $employee_count; ?></div>
+                    <div class="stat-label">Employees</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" onclick="window.location.href='admin-view-user.php'" style="cursor: pointer;">
+                    <div class="stat-icon icon-success">
+                        <i class="fas fa-id-card"></i>
+                    </div>
+                    <div class="stat-value"><?= $driver_count; ?></div>
+                    <div class="stat-label">Drivers</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" onclick="window.location.href='admin-view-vehicle.php'" style="cursor: pointer;">
+                    <div class="stat-icon icon-warning">
+                        <i class="fas fa-bus"></i>
+                    </div>
+                    <div class="stat-value"><?= $vehicle_count; ?></div>
+                    <div class="stat-label">Total Vehicles</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon icon-purple">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <div class="stat-value"><?= $admin_count; ?></div>
+                    <div class="stat-label">Admins</div>
                 </div>
             </div>
         </div>
 
-        <!-- Vehicles Card -->
-        <div class="col-md-6">
-            <div class="card text-center hover-translate shadow-sm h-100" onclick="window.location.replace('admin-view-vehicle.php')">
-                <div class="card-body d-flex flex-column justify-content-center align-items-center">
-                    <i class="fas fa-bus fa-3x text-warning mb-3"></i>
-                    <h5 class="card-title" id="vehicle-count"><?= $vehicle_count . " Vehicles"; ?></h5>
-                    <p class="text-muted">Total registered vehicles in fleet</p>
+        <!-- Recent Bookings Table -->
+        <div class="card table-card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-list me-2"></i> Recent Bookings</span>
+                <span class="badge bg-secondary fw-normal" id="last-updated">Updated just now</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="dataTable" width="100%">
+                        <thead>
+                        <tr>
+                            <th class="ps-4">ID</th>
+                            <th>User</th>
+                            <th>Contact</th>
+                            <th>Vehicle</th>
+                            <th>Reg No</th>
+                            <th>Booked On</th>
+                            <th>Journey Dates</th>
+                            <th>Status</th>
+                            <th class="text-end pe-4">Action</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <!-- Data populated by JS -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
-        </div>
-    </div>
-
-
-
-    <!-- Bookings Table -->
-    <div class="card mb-3 mt-4">
-        <div class="card-header">
-            <i class="fas fa-bus"></i> Recent Bookings
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered table-striped table-hover" id="dataTable" width="100%">
-                    <thead class="table-light">
-                    <tr>
-                        <th>B_ID</th>
-                        <th>Name</th>
-                        <th>Phone</th>
-                        <th>Vehicle Type</th>
-                        <th>Reg No</th>
-                        <th>Booked ON</th>
-                        <th>Booking For Dates</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <!-- Data will be populated by JS -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="card-footer text-muted small text-end" id="last-updated">
-            Last updated at <?= date("h:i A"); ?>
         </div>
     </div>
 </div>
 
 <!-- Scripts -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+
 <script>
     $(document).ready(function () {
         const table = $('#dataTable').DataTable({
-            "order": [[ 0, "desc" ]] // Sort by 'Booked ID' column (index 0) descending by default
+            "order": [[ 0, "desc" ]],
+            "pageLength": 10,
+            "dom": 'rtip', // Hide default search and length change for cleaner look
+            "language": {
+                "emptyTable": "No bookings found"
+            }
         });
 
         function fetchData() {
@@ -370,60 +340,51 @@ date_default_timezone_set("Asia/Kolkata");
                 method: 'GET',
                 dataType: 'json',
                 success: function (data) {
-                    // Update counts
-                    $('#employee-count').text(data.employee_count);
-                    $('#driver-count').text(data.driver_count);
-                    $('#manager-count').text(data.manager_count);
-                    $('#admin-count').text(data.admin_count);
+                    // Update counts (optional if you want real-time stats update)
+                    // ...
 
-                    $('#vehicle-count').text(data.vehicle_count + ' Vehicles');
-                    $('#last-updated').text('Last updated at ' + data.last_updated);
+                    $('#last-updated').text('Updated at ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
 
                     // Update table
                     table.clear();
                     data.bookings.forEach(function (row) {
                         const statusClass = {
-                            'PENDING': 'warning text-dark',
-                            'APPROVED': 'success',
-                            'COMPLETED': 'secondary',
-                            'REJECTED': 'danger',
-                            'CANCELLED': 'danger'
+                            'PENDING': 'bg-warning',
+                            'APPROVED': 'bg-success',
+                            'COMPLETED': 'bg-secondary',
+                            'REJECTED': 'bg-danger',
+                            'CANCELLED': 'bg-danger'
                         };
-                        const badgeClass = statusClass[row.status] || 'secondary';
+                        const badgeClass = statusClass[row.status] || 'bg-secondary';
                         
-                        let actions = '';
-                        // Always show Edit button regardless of status
-                        actions += `<a href="javascript:void(0);" onclick="window.location.replace('admin-approve-booking.php?booking_id=${row.booking_id}')" class="btn btn-primary btn-sm"><i class="fa fa-edit"></i></a> `;
+                        let actions = `<a href="admin-approve-booking.php?booking_id=${row.booking_id}" class="btn btn-sm btn-outline-primary rounded-pill px-3"><i class="fa fa-edit me-1"></i> Manage</a>`;
 
-                        // Removed the delete button as requested
-                        // actions += `<a href="javascript:void(0);" onclick="window.location.replace('admin-delete-booking.php?booking_id=${row.booking_id}')" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i></a>`;
-
-                        // Updated to use new schema column names from fetch-dashboard-data.php
-                        const fromDate = new Date(row.from_datetime).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                        const toDate = new Date(row.to_datetime).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                        const fromDate = new Date(row.from_datetime).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+                        const toDate = new Date(row.to_datetime).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
 
                         const bookedOn = new Date(row.created_at).toLocaleString('en-GB', { 
                             day: '2-digit', 
                             month: 'short', 
-                            year: '2-digit', 
                             hour: '2-digit', 
                             minute: '2-digit', 
                             hour12: true 
                         }).replace(',', '');
 
                         table.row.add([
-                            row.booking_id,
-                            `${row.u_fname} ${row.u_lname}`,
+                            `<span class="ps-2 fw-bold">${row.booking_id}</span>`,
+                            `<div class="d-flex align-items-center">
+                                <div><div class="fw-bold">${row.u_fname} ${row.u_lname}</div></div>
+                             </div>`,
                             row.u_phone,
-                            row.v_name, // Assuming v_name is vehicle type/name
-                            row.v_reg_no,
+                            row.v_name,
+                            `<span class="font-monospace">${row.v_reg_no}</span>`,
                             bookedOn,
-                            `${fromDate} → ${toDate}`,
-                            `<span class="badge bg-${badgeClass}">${row.status}</span>`,
-                            actions
+                            `<small>${fromDate} <i class="fas fa-arrow-right mx-1 text-muted" style="font-size:0.7rem"></i> ${toDate}</small>`,
+                            `<span class="badge ${badgeClass}">${row.status}</span>`,
+                            `<div class="text-end pe-2">${actions}</div>`
                         ]);
                     });
-                    table.draw(false); // false to keep pagination
+                    table.draw(false);
                 }
             });
         }

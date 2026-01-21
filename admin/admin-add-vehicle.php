@@ -151,7 +151,7 @@ if (isset($_SESSION['err'])) {
 
                 <div class="card-body bg-light p-4">
                     <form method="POST" enctype="multipart/form-data">
-                        
+
                         <!-- Section: Basic Info -->
                         <div class="card border-0 shadow-sm mb-4">
                             <div class="card-body p-4">
@@ -204,12 +204,12 @@ if (isset($_SESSION['err'])) {
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Section: Ownership & Vendor -->
                         <div class="card border-0 shadow-sm mb-4">
                             <div class="card-body p-4">
                                 <h6 class="text-uppercase text-muted small font-weight-bold mb-3 border-bottom pb-2">Ownership & Vendor Details</h6>
-                                
+
                                 <div class="row">
                                     <div class="col-md-4">
                                         <div class="form-group">
@@ -221,7 +221,7 @@ if (isset($_SESSION['err'])) {
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <!-- Vendor Specific Fields -->
                                 <div id="vendor-fields" style="display: none;" class="mt-3">
                                     <div class="bg-white p-3 rounded border">
@@ -252,7 +252,7 @@ if (isset($_SESSION['err'])) {
                                                 </div>
                                             </div>
                                         </div>
-                                        
+
                                         <h6 class="text-primary font-weight-bold mb-3 small text-uppercase border-top pt-3">Contract Terms</h6>
                                         <div class="row">
                                             <div class="col-md-3">
@@ -293,7 +293,7 @@ if (isset($_SESSION['err'])) {
                         <div class="card border-0 shadow-sm mb-4">
                             <div class="card-body p-4">
                                 <h6 class="text-uppercase text-muted small font-weight-bold mb-3 border-bottom pb-2">Additional Information</h6>
-                                
+
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="form-group">
