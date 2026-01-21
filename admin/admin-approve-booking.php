@@ -173,6 +173,8 @@ if (isset($_POST['approve_booking'])) {
                     u.phone      AS uphone,
                 
                     v.name       AS vehicle,
+                    v.reg_no     AS v_reg_no,
+                    v.image      AS v_image,
                 
                     d.user_id    AS duid,
                 
@@ -209,12 +211,21 @@ if (isset($_POST['approve_booking'])) {
             $driverName = trim(($D['df'] ?? '').' '.($D['dl'] ?? ''));
 
             $driverPhone = $D['dphone'] ?: 'Not Assigned';
+            
+            // Base URL for images
+            $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+            $host = $_SERVER['HTTP_HOST'];
+            $baseUrl = $protocol . "://" . $host . $projectFolder;
 
 
             // ===== PREPARE DATA =====
             $userData = [
                     'status'       => $status_enum,
+                    'user_name'    => $userName,
                     'vehicle'      => $D['vehicle'] ?? 'N/A',
+                    'vehicle_reg_no' => $D['v_reg_no'] ?? 'N/A',
+                    'vehicle_image' => $D['v_image'] ?? '',
+                    'base_url'     => $baseUrl,
 
                     'from'         => $from,
                     'to'           => $to,
@@ -256,6 +267,7 @@ if (isset($_POST['approve_booking'])) {
             if ($status_enum === 'APPROVED' && !empty($D['demail'])) {
 
                 $driverData = [
+                        'driver_name' => $driverName,
                         'user'       => $userName,
                         'user_phone' => $D['uphone'],
 
@@ -571,7 +583,7 @@ if (isset($_POST['approve_booking'])) {
                                                 <div class="col-md-5 border-right">
                                                     <div class="form-group mb-0 h-100">
                                                         <label class="small font-weight-bold mb-1">Admin Remarks</label>
-                                                        <textarea name="admin_remarks" class="form-control form-control-sm h-75" placeholder="Enter any remarks or notes for this booking..." required></textarea>
+                                                        <textarea name="admin_remarks" class="form-control form-control-sm h-75" placeholder="Enter any remarks or notes for this booking..."></textarea>
                                                     </div>
                                                 </div>
 
