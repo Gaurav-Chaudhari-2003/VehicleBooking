@@ -67,9 +67,135 @@ if (isset($_POST['Usr-login'])) {
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>Vehicle Booking System - Client Login</title>
-    <link href="vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
-    <link href="vendor/css/sb-admin.css" rel="stylesheet">
+    <title>Client Login | Vehicle Booking System</title>
+    
+    <!-- Include Global Theme -->
+    <?php include("../vendor/inc/theme-config.php"); ?>
+    
+    <style>
+        body {
+            background: linear-gradient(135deg, var(--accent-color) 0%, #ffffff 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        
+        .login-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+            width: 100%;
+            max-width: 450px;
+            background: #fff;
+        }
+        
+        .card-header {
+            background-color: #fff;
+            border-bottom: none;
+            padding: 30px 30px 10px;
+            text-align: center;
+        }
+        
+        .card-body {
+            padding: 30px;
+        }
+        
+        .login-logo {
+            width: 80px;
+            margin-bottom: 15px;
+        }
+        
+        .login-title {
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+        
+        .login-subtitle {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .form-control {
+            border-radius: 50px;
+            padding: 12px 20px;
+            height: auto;
+            background-color: #f8f9fa;
+            border: 1px solid #eee;
+        }
+        
+        .form-control:focus {
+            box-shadow: none;
+            border-color: var(--secondary-color);
+            background-color: #fff;
+        }
+        
+        .btn-login {
+            border-radius: 50px;
+            padding: 12px;
+            font-weight: 600;
+            background-color: var(--primary-color);
+            border: none;
+            transition: all 0.3s;
+        }
+        
+        .btn-login:hover {
+            background-color: var(--secondary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            transition: transform 0.2s;
+        }
+        
+        .back-btn:hover {
+            transform: translateX(-3px);
+            text-decoration: none;
+            color: var(--secondary-color);
+        }
+        
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 20px 0;
+            color: #ccc;
+        }
+        
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .divider span {
+            padding: 0 10px;
+            font-size: 0.8rem;
+        }
+        
+        .footer-links a {
+            color: #666;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+        
+        .footer-links a:hover {
+            color: var(--primary-color);
+        }
+    </style>
+    
     <script>
         // Prevent back button from showing this page if coming from dashboard
         if (window.history.replaceState) {
@@ -78,45 +204,51 @@ if (isset($_POST['Usr-login'])) {
     </script>
 </head>
 
-<body class="bg-dark">
-<div class="container">
-    <div class="card card-login mx-auto mt-5">
-        <div class="card-header d-flex align-items-center">
-            <a href="javascript:void(0);" onclick="window.location.replace('../index.php')" class="btn btn-light btn-sm mr-3 text-primary font-weight-bold"><i class="fas fa-arrow-left"></i> Back</a>
-            <div class="flex-grow-1 text-center" style="margin-right: 60px;">Client Login Panel</div>
-        </div>
-        <div class="card-body">
+<body>
 
-            <?php if (!empty($error)): ?>
-                <script src="vendor/js/swal.js"></script>
-                <script>
-                    setTimeout(function () {
-                        swal("Login Failed", "<?php echo $error; ?>", "error");
-                    }, 100);
-                </script>
-            <?php endif; ?>
+<a href="../index.php" class="back-btn">
+    <i class="fas fa-arrow-left mr-2"></i> Back to Home
+</a>
 
-            <form method="POST">
-                <div class="form-group">
-                    <div class="form-label-group">
-                        <input type="email" name="u_email" id="inputEmail" class="form-control" required autofocus>
-                        <label for="inputEmail">Email address</label>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <div class="form-label-group">
-                        <input type="password" name="u_pwd" id="inputPassword" class="form-control" required>
-                        <label for="inputPassword">Password</label>
-                    </div>
-                </div>
-                <input type="submit" name="Usr-login" class="btn btn-success btn-block" value="Login">
-            </form>
-
-            <div class="text-center mt-3">
-                <a class="d-block small" href="usr-register.php">Register an Account</a>
-                <a class="d-block small" href="../password-reset.php">Forgot Password?</a>
-                <a class="d-block small" href="../index.php">Home</a>
+<div class="login-card">
+    <div class="card-header">
+        <img src="https://www.cmpdi.co.in/sites/default/files/cmpdi_new_logo_10012025.png" alt="Logo" class="login-logo">
+        <h4 class="login-title">Welcome Back</h4>
+        <p class="login-subtitle">Sign in to book your vehicle</p>
+    </div>
+    
+    <div class="card-body">
+        <?php if (!empty($error)): ?>
+            <script src="vendor/js/swal.js"></script>
+            <script>
+                setTimeout(function () {
+                    swal("Login Failed", "<?php echo $error; ?>", "error");
+                }, 100);
+            </script>
+            <div class="alert alert-danger text-center small py-2 mb-3 rounded-pill">
+                <?php echo $error; ?>
             </div>
+        <?php endif; ?>
+
+        <form method="POST">
+            <div class="form-group mb-3">
+                <input type="email" name="u_email" class="form-control" placeholder="Email Address" required autofocus>
+            </div>
+            <div class="form-group mb-4">
+                <input type="password" name="u_pwd" class="form-control" placeholder="Password" required>
+            </div>
+            <button type="submit" name="Usr-login" class="btn btn-primary btn-block btn-login">
+                Sign In
+            </button>
+        </form>
+
+        <div class="divider">
+            <span>OR</span>
+        </div>
+
+        <div class="text-center footer-links">
+            <p class="mb-2">Don't have an account? <a href="usr-register.php" class="font-weight-bold">Register Now</a></p>
+            <a href="../password-reset.php" class="small text-muted">Forgot Password?</a>
         </div>
     </div>
 </div>
@@ -125,6 +257,7 @@ if (isset($_POST['Usr-login'])) {
 <script src="vendor/jquery/jquery.min.js"></script>
 <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="vendor/jquery-easing/jquery.easing.min.js"></script>
+<script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
 </body>
 
 </html>
