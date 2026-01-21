@@ -83,6 +83,12 @@ if (isset($_GET['ajax_filter'])) {
     
     if ($res->num_rows > 0) {
         while ($row = $res->fetch_object()) {
+            // Determine role badge color
+            $roleBadgeClass = 'bg-secondary'; // Default
+            if ($row->role == 'ADMIN') $roleBadgeClass = 'bg-danger';
+            elseif ($row->role == 'MANAGER') $roleBadgeClass = 'bg-primary';
+            elseif ($row->role == 'DRIVER') $roleBadgeClass = 'bg-success';
+            elseif ($row->role == 'EMPLOYEE') $roleBadgeClass = 'bg-info text-dark';
             ?>
             <tr id="user-row-<?php echo $row->id; ?>">
                 <td><?php echo $cnt++; ?></td>
@@ -97,13 +103,13 @@ if (isset($_GET['ajax_filter'])) {
                 </td>
                 <td><?php echo $row->phone; ?></td>
                 <td><?php echo $row->address; ?></td>
-                <td><span class="badge bg-info text-dark"><?php echo $row->role; ?></span></td>
+                <td><span class="badge <?php echo $roleBadgeClass; ?>"><?php echo $row->role; ?></span></td>
                 <td>
                     <?php if ($show_deactivated) { ?>
                         <button class="btn btn-sm btn-success rounded-pill px-3" onclick="performAction('activate', <?php echo $row->id; ?>)"><i class="fas fa-check me-1"></i> Reactivate</button>
                     <?php } else { ?>
                         <a href="admin-manage-single-usr.php?u_id=<?php echo $row->id; ?>" class="btn btn-sm btn-outline-primary rounded-pill px-3 me-1"><i class="fa fa-edit"></i> Edit</a>
-                        <button class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="performAction('deactivate', <?php echo $row->id; ?>)"><i class="fa fa-trash"></i></button>
+                        <!-- Deactivate button removed from here as requested -->
                     <?php } ?>
                 </td>
             </tr>
@@ -159,6 +165,14 @@ if (isset($_GET['ajax_pending_filter'])) {
 $filter_role = isset($_GET['role']) ? $_GET['role'] : 'ALL';
 $show_deactivated = isset($_GET['show_deactivated']) && $_GET['show_deactivated'] == 'true';
 $show_rejected = isset($_GET['show_rejected']) && $_GET['show_rejected'] == 'true';
+
+// Check for pending approvals count
+$pending_count_query = "SELECT COUNT(*) FROM users WHERE is_active = 0";
+$pending_stmt = $mysqli->prepare($pending_count_query);
+$pending_stmt->execute();
+$pending_stmt->bind_result($pending_count);
+$pending_stmt->fetch();
+$pending_stmt->close();
 ?>
 
 <!DOCTYPE html>
@@ -262,8 +276,8 @@ $show_rejected = isset($_GET['show_rejected']) && $_GET['show_rejected'] == 'tru
             </a>
         </div>
 
-        <!-- Pending Approvals -->
-        <div class="card">
+        <!-- Pending Approvals (Hidden if 0) -->
+        <div class="card" id="pendingApprovalsCard" style="<?php echo ($pending_count == 0) ? 'display: none;' : ''; ?>">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0 text-warning fw-bold" id="pendingTableTitle"><i class="fas fa-user-clock me-2"></i> Pending Approvals</h5>
                 
@@ -373,12 +387,17 @@ $show_rejected = isset($_GET['show_rejected']) && $_GET['show_rejected'] == 'tru
                         
                         if ($res->num_rows > 0) {
                             while ($row = $res->fetch_object()) {
+                                // Determine role badge color
+                                $roleBadgeClass = 'bg-secondary'; // Default
+                                if ($row->role == 'ADMIN') $roleBadgeClass = 'bg-danger';
+                                elseif ($row->role == 'MANAGER') $roleBadgeClass = 'bg-primary';
+                                elseif ($row->role == 'DRIVER') $roleBadgeClass = 'bg-success';
+                                elseif ($row->role == 'EMPLOYEE') $roleBadgeClass = 'bg-info text-dark';
                                 ?>
                                 <tr id="user-row-<?php echo $row->id; ?>">
                                     <td class="ps-4"><?php echo $cnt++; ?></td>
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <div class="bg-light rounded-circle p-2 me-2"><i class="fas fa-user text-secondary"></i></div>
                                             <div>
                                                 <div class="fw-bold"><?php echo $row->first_name . " " . $row->last_name; ?></div>
                                                 <small class="text-muted"><?php echo $row->email; ?></small>
@@ -387,13 +406,12 @@ $show_rejected = isset($_GET['show_rejected']) && $_GET['show_rejected'] == 'tru
                                     </td>
                                     <td><?php echo $row->phone; ?></td>
                                     <td><?php echo $row->address; ?></td>
-                                    <td><span class="badge bg-info text-dark"><?php echo $row->role; ?></span></td>
+                                    <td><span class="badge <?php echo $roleBadgeClass; ?>"><?php echo $row->role; ?></span></td>
                                     <td>
                                         <?php if ($show_deactivated) { ?>
                                             <button class="btn btn-sm btn-success rounded-pill px-3" onclick="performAction('activate', <?php echo $row->id; ?>)"><i class="fas fa-check me-1"></i> Reactivate</button>
                                         <?php } else { ?>
                                             <a href="admin-manage-single-usr.php?u_id=<?php echo $row->id; ?>" class="btn btn-sm btn-outline-primary rounded-pill px-3 me-1"><i class="fa fa-edit"></i> Edit</a>
-                                            <button class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="performAction('deactivate', <?php echo $row->id; ?>)"><i class="fa fa-trash"></i></button>
                                         <?php } ?>
                                     </td>
                                 </tr>

@@ -29,9 +29,7 @@ if (isset($_POST['approve_booking'])) {
     $from_datetime = $_POST['from_datetime'];
     $to_datetime = $_POST['to_datetime'];
 
-    // Simple check if it's just a date (length 10: YYYY-MM-DD)
-    // if (strlen($from_datetime) == 10) $from_datetime .= ' 00:00:00'; // Removed: Admin now selects time
-    if (strlen($to_datetime) == 10) $to_datetime .= ' 23:59:59'; // Assuming 'To' implies the inclusive end of day
+    if (strlen($to_datetime) == 10) $to_datetime .= ' 23:59:59';
 
     $pickup_location = $_POST['pickup_location'];
     $drop_location = $_POST['drop_location'];
@@ -44,7 +42,7 @@ if (isset($_POST['approve_booking'])) {
         $err = "Cannot approve! Please assign a valid driver.";
     }
 
-    // CONFLICT CHECK: Before approving, check if the dates conflict with any other APPROVED booking for the same vehicle
+    // CONFLICT CHECK
     if (!$conflict_found && $status_enum === 'APPROVED') {
         // 1. Vehicle Conflict Check
         $v_stmt = $mysqli->prepare("SELECT vehicle_id FROM bookings WHERE id = ?");
@@ -54,7 +52,6 @@ if (isset($_POST['approve_booking'])) {
         if ($v_row = $v_res->fetch_assoc()) {
             $vehicle_id = $v_row['vehicle_id'];
 
-            // Check for overlaps with other APPROVED bookings for the same vehicle
             $conflict_query = "SELECT id FROM bookings 
                                WHERE vehicle_id = ? 
                                  AND status = 'APPROVED' 
@@ -72,10 +69,8 @@ if (isset($_POST['approve_booking'])) {
             }
         }
 
-        // 2. Driver Conflict Check (if a driver is assigned)
+        // 2. Driver Conflict Check
         if (!$conflict_found && $driver_id) {
-            // Check if this driver is assigned to any other APPROVED booking that overlaps with these dates
-            // Logic: Same driver, APPROVED status, different booking ID, overlapping dates
             $driver_conflict_query = "SELECT id FROM bookings 
                                       WHERE driver_id = ? 
                                         AND status = 'APPROVED' 
@@ -95,8 +90,6 @@ if (isset($_POST['approve_booking'])) {
     }
 
     if (!$conflict_found) {
-        // 1. Update the status of the current booking
-        // Also update driver_id and editable fields if provided
         $query = "UPDATE bookings SET status = ?, driver_id = ?, from_datetime = ?, to_datetime = ?, pickup_location = ?, drop_location = ? WHERE id = ?";
         $stmt = $mysqli->prepare($query);
         $stmt->bind_param('sissssi', $status_enum, $driver_id, $from_datetime, $to_datetime, $pickup_location, $drop_location, $booking_id);
@@ -112,16 +105,14 @@ if (isset($_POST['approve_booking'])) {
                 $remark_stmt->bind_param('siis', $entity_type, $booking_id, $aid, $admin_remarks);
                 $remark_stmt->execute();
 
-                // Update last_remark_id in the bookings table
                 $last_remark_id = $mysqli->insert_id;
                 $update_remark_id = $mysqli->prepare("UPDATE bookings SET last_remark_id = ? WHERE id = ?");
                 $update_remark_id->bind_param('ii', $last_remark_id, $booking_id);
                 $update_remark_id->execute();
             }
 
-            // 2. If the booking is APPROVED, automatically reject conflicting PENDING bookings
+            // Reject conflicting PENDING bookings
             if ($status_enum === 'APPROVED') {
-                // Fetch details of the approved booking to get vehicle_id and dates
                 $detailsQuery = "SELECT vehicle_id FROM bookings WHERE id = ?";
                 $detailsStmt = $mysqli->prepare($detailsQuery);
                 $detailsStmt->bind_param('i', $booking_id);
@@ -130,22 +121,19 @@ if (isset($_POST['approve_booking'])) {
 
                 if ($row = $detailsResult->fetch_assoc()) {
                     $vehicle_id = $row['vehicle_id'];
-
-                    // Reject conflicting Pending bookings for the same vehicle
                     $rejectQuery = "UPDATE bookings 
                                     SET status = 'REJECTED'
                                     WHERE vehicle_id = ? 
                                       AND status = 'PENDING' 
                                       AND id != ? 
                                       AND (from_datetime <= ? AND to_datetime >= ?)";
-
                     $rejectStmt = $mysqli->prepare($rejectQuery);
                     $rejectStmt->bind_param('iiss', $vehicle_id, $booking_id, $to_datetime, $from_datetime);
                     $rejectStmt->execute();
                 }
             }
 
-            // Log the operation
+            // Log operation
             $action = "Booking " . ucfirst(strtolower($status_enum));
             $log_remark = "Admin updated status to $status_enum. Remarks: $admin_remarks. Driver Assigned ID: " . ($driver_id ?? 'None');
             $entity_type = 'BOOKING';
@@ -154,9 +142,7 @@ if (isset($_POST['approve_booking'])) {
             $hist_stmt->bind_param('sisis', $entity_type, $booking_id, $action, $aid, $log_remark);
             $hist_stmt->execute();
 
-            // Optional: Set a flash message in session if needed
             $_SESSION['flash_success'] = "Booking has been " . strtolower($status_enum) . " successfully.";
-
 
             // ===== FETCH FULL DETAILS FOR MAIL =====
             $q = $mysqli->prepare("
@@ -195,205 +181,149 @@ if (isset($_POST['approve_booking'])) {
 
             $q->bind_param('i', $booking_id);
             $q->execute();
-
             $D = $q->get_result()->fetch_assoc();
 
-            if (!$D) {
-                error_log("MAIL: Booking data not found for ID: $booking_id");
-                return;   // safer than goto
-            }
+            if ($D) {
+                $from = date('d M Y h:i A', strtotime($D['from_datetime']));
+                $to = date('d M Y h:i A', strtotime($D['to_datetime']));
+                $userName = trim($D['uf'] . ' ' . $D['ul']);
+                $driverName = trim(($D['df'] ?? '') . ' ' . ($D['dl'] ?? ''));
+                $driverPhone = $D['dphone'] ?: 'Not Assigned';
 
-            // ----- Formatting -----
-            $from = date('d M Y h:i A', strtotime($D['from_datetime']));
-            $to   = date('d M Y h:i A', strtotime($D['to_datetime']));
+                $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+                $host = $_SERVER['HTTP_HOST'];
+                $baseUrl = $protocol . "://" . $host . $projectFolder;
 
-            $userName   = trim($D['uf'].' '.$D['ul']);
-            $driverName = trim(($D['df'] ?? '').' '.($D['dl'] ?? ''));
-
-            $driverPhone = $D['dphone'] ?: 'Not Assigned';
-            
-            // Base URL for images
-            $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
-            $host = $_SERVER['HTTP_HOST'];
-            $baseUrl = $protocol . "://" . $host . $projectFolder;
-
-
-            // ===== PREPARE DATA =====
-            $userData = [
-                    'status'       => $status_enum,
-                    'user_name'    => $userName,
-                    'vehicle'      => $D['vehicle'] ?? 'N/A',
-                    'vehicle_reg_no' => $D['v_reg_no'] ?? 'N/A',
-                    'vehicle_image' => $D['v_image'] ?? '',
-                    'base_url'     => $baseUrl,
-
-                    'from'         => $from,
-                    'to'           => $to,
-
-                    'pickup'       => $D['pickup_location'] ?? 'N/A',
-                    'drop'         => $D['drop_location'] ?? 'N/A',
-
-                    'driver'       => $driverName ?: 'Not Assigned',
-                    'driver_phone' => $driverPhone,
-
-                    'remark'       => $admin_remarks ?: 'No remarks'
-            ];
-
-            // ===== ICS CALENDAR =====
-            $ics = MailTemplates::ics($userData);
-
-
-            // ===== MAIL TO USER =====
-            try {
-
-                $html = MailTemplates::userMail($userData);
-
-                BrevoMailer::send(
-                        $D['uemail'],
-                        $userName,
-                        "Booking $status_enum",
-                        $html,
-                        $ics       // 📅 calendar attached
-                );
-
-                error_log("MAIL: Sent to USER {$D['uemail']} for booking $booking_id");
-
-            } catch (Exception $e) {
-                error_log("MAIL USER ERROR: ".$e->getMessage());
-            }
-
-
-            // ===== MAIL TO DRIVER =====
-            if ($status_enum === 'APPROVED' && !empty($D['demail'])) {
-
-                $driverData = [
-                        'driver_name' => $driverName,
-                        'user'       => $userName,
-                        'user_phone' => $D['uphone'],
-
-                        'vehicle'    => $D['vehicle'],
-
-                        'from'       => $from,
-                        'to'         => $to,
-
-                        'pickup'     => $D['pickup_location'],
-                        'drop'       => $D['drop_location']
+                $userData = [
+                        'status' => $status_enum,
+                        'user_name' => $userName,
+                        'vehicle' => $D['vehicle'] ?? 'N/A',
+                        'vehicle_reg_no' => $D['v_reg_no'] ?? 'N/A',
+                        'vehicle_image' => $D['v_image'] ?? '',
+                        'base_url' => $baseUrl,
+                        'from' => $from,
+                        'to' => $to,
+                        'pickup' => $D['pickup_location'] ?? 'N/A',
+                        'drop' => $D['drop_location'] ?? 'N/A',
+                        'driver' => $driverName ?: 'Not Assigned',
+                        'driver_phone' => $driverPhone,
+                        'remark' => $admin_remarks ?: 'No remarks'
                 ];
 
+                $ics = MailTemplates::ics($userData);
+
                 try {
-
-                    $html2 = MailTemplates::driverMail($driverData);
-
-                    BrevoMailer::send(
-                            $D['demail'],
-                            $driverName,
-                            "Driver Assignment – {$D['vehicle']}",
-                            $html2,
-                            $ics      // 📅 calendar
-                    );
-
-                    error_log("MAIL: Sent to DRIVER {$D['demail']}");
-
+                    $html = MailTemplates::userMail($userData);
+                    BrevoMailer::send($D['uemail'], $userName, "Booking $status_enum", $html, $ics);
                 } catch (Exception $e) {
-                    error_log("MAIL DRIVER ERROR: ".$e->getMessage());
+                    error_log("MAIL USER ERROR: " . $e->getMessage());
+                }
+
+                if ($status_enum === 'APPROVED' && !empty($D['demail'])) {
+                    $driverData = [
+                            'driver_name' => $driverName,
+                            'user' => $userName,
+                            'user_phone' => $D['uphone'],
+                            'vehicle' => $D['vehicle'],
+                            'from' => $from,
+                            'to' => $to,
+                            'pickup' => $D['pickup_location'],
+                            'drop' => $D['drop_location']
+                    ];
+                    try {
+                        $html2 = MailTemplates::driverMail($driverData);
+                        BrevoMailer::send($D['demail'], $driverName, "Driver Assignment – {$D['vehicle']}", $html2, $ics);
+                    } catch (Exception $e) {
+                        error_log("MAIL DRIVER ERROR: " . $e->getMessage());
+                    }
                 }
             }
 
-        }
-
-
-            // Redirect to dashboard after short delay
-            echo "<script>
-            setTimeout(function() {
-                window.location.href = 'admin-dashboard.php';
-            }, 1500);
-        </script>";
-            exit(); // Kill the current page execution
-    } else {
+            echo "<script>setTimeout(function() { window.location.href = 'admin-dashboard.php'; }, 1500);</script>";
+            exit();
+        } else {
             $err = "Failed to update booking.";
+        }
     }
 }
-
-
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
-<?php include('vendor/inc/head.php'); ?>
-<!-- Flatpickr CSS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<!-- Leaflet CSS -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<!-- Leaflet Control Geocoder CSS -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
-<!-- Leaflet Routing Machine CSS -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
-
-<style>
-    /* Custom styles for Flatpickr */
-    .flatpickr-day.pending {
-        background-color: #ffc107 !important;
-        color: black !important;
-        border-color: #ffc107 !important;
-    }
-    .flatpickr-day.booked {
-        background-color: #ff4d4d !important;
-        color: white !important;
-        border-color: #ff4d4d !important;
-    }
-    .flatpickr-day.overlap-restricted {
-        background-color: #e0e0e0 !important;
-        color: #aaaaaa !important;
-        border-color: #e0e0e0 !important;
-        cursor: not-allowed;
-    }
+<head>
+    <meta charset="UTF-8">
+    <title>Review Booking | Vehicle Booking System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    /* Driver Dropdown Styles */
-    .driver-option-busy {
-        background-color: #ffebee;
-        color: #c62828;
-    }
+    <!-- Include Global Theme -->
+    <?php include("../vendor/inc/theme-config.php"); ?>
     
-    /* Map Styles */
-    .map-container {
-        height: 300px;
-        width: 100%;
-        border-radius: 8px;
-        margin-bottom: 15px;
-    }
+    <!-- Flatpickr CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet Control Geocoder CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <!-- Leaflet Routing Machine CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+
+    <style>
+        body { background-color: #fff; }
+        .dashboard-container { display: flex; min-height: 100vh; }
+        .main-content { flex: 1; padding: 30px; margin-left: 260px; background-color: #f8f9fa; }
+        
+        .card { border: none; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .card-header { background-color: #fff; border-bottom: 1px solid #eee; padding: 15px 20px; border-radius: 15px 15px 0 0 !important; font-weight: 700; color: var(--primary-color); }
+        
+        /* Map Styles */
+        .map-container { height: 300px; width: 100%; border-radius: 15px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .input-group-text { cursor: pointer; }
+        .leaflet-routing-container { display: none !important; }
+        
+        /* Form Styles */
+        .form-control, .form-select { border-radius: 10px; padding: 10px 15px; border: 1px solid #ddd; }
+        .form-control:focus, .form-select:focus { box-shadow: 0 0 0 3px rgba(0, 121, 107, 0.1); border-color: var(--secondary-color); }
+        
+        /* Custom styles for Flatpickr */
+        .flatpickr-day.pending { background-color: #ffc107 !important; color: black !important; border-color: #ffc107 !important; }
+        .flatpickr-day.booked { background-color: #ff4d4d !important; color: white !important; border-color: #ff4d4d !important; }
+        .flatpickr-day.overlap-restricted { background-color: #e0e0e0 !important; color: #aaaaaa !important; border-color: #e0e0e0 !important; cursor: not-allowed; }
+        
+        .driver-option-busy { background-color: #ffebee; color: #c62828; }
+        
+        .info-label { font-size: 0.75rem; text-transform: uppercase; color: #888; font-weight: 600; margin-bottom: 2px; }
+        .info-value { font-size: 0.95rem; font-weight: 500; color: #333; margin-bottom: 10px; }
+        
+        .vehicle-thumb { width: 100%; height: 120px; object-fit: cover; border-radius: 10px; }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        .card img {
+            background: #f8f9fa;
+        }
+
+    </style>
+</head>
+
+<body id="page-top">
+
+<div class="dashboard-container">
+    <!-- Sidebar -->
+    <?php include("vendor/inc/sidebar.php"); ?>
     
-    .input-group-text {
-        cursor: pointer;
-    }
-    
-    /* Hide default routing container if we want custom display */
-    .leaflet-routing-container {
-        display: none !important;
-    }
-</style>
+    <!-- Main Content -->
+    <div class="main-content">
 
-<body id="page-top" style="overflow-x: hidden; background-color: #f8f9fc;">
-<div id="wrapper">
-
-    <div id="content-wrapper">
-
-        <div class="container-fluid p-3">
+        <div class="container-fluid">
 
             <!-- Success/Error Messages -->
             <?php if (isset($succ)) { ?>
-                <script>
-                    setTimeout(function () {
-                        swal("Success!", "<?php echo $succ; ?>", "success");
-                    }, 100);
-                </script>
+                <script>setTimeout(function () { swal("Success!", "<?php echo $succ; ?>", "success"); }, 100);</script>
             <?php } ?>
-
             <?php if (isset($err)) { ?>
-                <script>
-                    setTimeout(function () {
-                        swal("Failed!", "<?php echo $err; ?>", "error");
-                    }, 100);
-                </script>
+                <script>setTimeout(function () { swal("Failed!", "<?php echo $err; ?>", "error"); }, 100);</script>
             <?php } ?>
 
             <?php
@@ -434,175 +364,194 @@ if (isset($_POST['approve_booking'])) {
                 $vehicleImage = $projectFolder . 'vendor/img/' . ($row->v_image ?: 'placeholder.png');
                 ?>
                 
-                <div class="card shadow border-0 rounded-lg">
-                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom-0">
-                        <h5 class="mb-0 font-weight-bold text-primary"><i class="fas fa-clipboard-check mr-2"></i> Review Booking #<?php echo $row->booking_id; ?></h5>
-                        <a href="admin-dashboard.php" class="btn btn-sm btn-outline-secondary font-weight-bold rounded-pill px-3"><i class="fas fa-arrow-left mr-1"></i> Back to Dashboard</a>
+                <!-- Header -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <a href="admin-dashboard.php" class="btn btn-outline-secondary rounded-pill px-3 me-3">
+                            <i class="fas fa-arrow-left me-2"></i> Dashboard
+                        </a>
+                        <h3 class="d-inline-block align-middle fw-bold text-dark mb-0">Review Booking #<?php echo $row->booking_id; ?></h3>
                     </div>
-                    <div class="card-body bg-light p-4">
-                        <form method="POST">
-                            <!-- Hidden input for vehicle ID to be used by JS -->
-                            <input type="hidden" id="vehicle_id" value="<?php echo $row->vehicle_id; ?>">
-                            <input type="hidden" id="current_booking_id" value="<?php echo $row->booking_id; ?>">
+                    <span class="badge <?php echo ($row->status == 'PENDING' ? 'bg-warning text-dark' : ($row->status == 'APPROVED' ? 'bg-success' : 'bg-danger')); ?> fs-6 px-3 py-2 rounded-pill">
+                        <?php echo $row->status; ?>
+                    </span>
+                </div>
+
+                <form method="POST">
+                    <!-- Hidden input for vehicle ID to be used by JS -->
+                    <input type="hidden" id="vehicle_id" value="<?php echo $row->vehicle_id; ?>">
+                    <input type="hidden" id="current_booking_id" value="<?php echo $row->booking_id; ?>">
+
+                    <div class="row">
+                        <!-- Left Column: Journey Details -->
+                        <div class="col-lg-8">
+                            <div class="card h-100">
+                                <div class="card-header"><i class="fas fa-map-marked-alt me-2"></i> Journey Details</div>
+                                <div class="card-body">
+                                    
+                                    <!-- Map Container (Always Visible) -->
+                                    <div id="map-container" style="position: relative;" class="mb-3">
+                                        <div id="map" class="map-container"></div>
+                                        
+                                        <!-- Route Info -->
+                                        <div id="route-info" class="alert alert-info text-center py-2 mb-2" style="display:none;">
+                                            <i class="fas fa-route"></i> 
+                                            <strong>Distance:</strong> <span class="route-dist">0 km</span> &nbsp;|&nbsp; 
+                                            <i class="fas fa-car"></i> <strong>Est. Time:</strong> <span class="route-time">0 min</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold small text-muted">Pickup Location</label>
+                                            <div class="input-group" onclick="openMap('pickup')">
+                                                <span class="input-group-text bg-success text-white"><i class="fas fa-map-marker-alt"></i></span>
+                                                <input type="text" id="pickup_location" name="pickup_location" class="form-control pickup-input" value="<?php echo htmlspecialchars($row->pickup_location); ?>" required placeholder="Click to select on map" readonly style="background-color: #fff; cursor: pointer;">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold small text-muted">Drop Location</label>
+                                            <div class="input-group" onclick="openMap('drop')">
+                                                <span class="input-group-text bg-danger text-white"><i class="fas fa-map-marker-alt"></i></span>
+                                                <input type="text" id="drop_location" name="drop_location" class="form-control drop-input" value="<?php echo htmlspecialchars($row->drop_location); ?>" required placeholder="Click to select on map" readonly style="background-color: #fff; cursor: pointer;">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold small text-muted">From Date & Time</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light"><i class="far fa-calendar-alt"></i></span>
+                                                <input type="text" id="from_datetime" name="from_datetime" class="form-control book-from-date" value="<?php echo date('Y-m-d H:i', strtotime($row->from_datetime)); ?>">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-bold small text-muted">To Date</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-light"><i class="far fa-calendar-alt"></i></span>
+                                                <input type="text" id="to_datetime" name="to_datetime" class="form-control book-to-date" value="<?php echo date('Y-m-d', strtotime($row->to_datetime)); ?>">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-0">
+                                        <label class="form-label fw-bold small text-muted">Purpose</label>
+                                        <div class="p-3 bg-light rounded border text-muted">
+                                            <i class="fas fa-quote-left me-2 opacity-50"></i> <?php echo htmlspecialchars($row->purpose); ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column: Sidebar Info & Actions -->
+                        <div class="col-lg-4">
                             
-                            <!-- Row 1: User and Vehicle/Trip -->
-                            <div class="row">
-                                <!-- User Details -->
-                                <div class="col-lg-4 mb-3">
-                                    <div class="card border-0 shadow-sm h-100">
-                                        <div class="card-body p-3">
-                                            <h6 class="text-uppercase text-muted small font-weight-bold mb-3 border-bottom pb-2">User Details</h6>
-                                            <div class="d-flex align-items-center mb-3">
-                                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center mr-3" style="width: 40px; height: 40px;">
-                                                    <i class="fas fa-user"></i>
+                            <!-- Requester Info -->
+                            <div class="card mb-3">
+                                <div class="card-header"><i class="fas fa-user me-2"></i> Requester</div>
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div>
+                                            <div class="fw-bold text-dark"><?php echo $row->first_name . ' ' . $row->last_name; ?></div>
+                                            <div class="small text-muted"><?php echo $row->email; ?></div>
+                                        </div>
+                                    </div>
+                                    <div class="info-label">Contact</div>
+                                    <div class="info-value"><i class="fas fa-phone me-2 text-muted"></i> <?php echo $row->phone; ?></div>
+                                </div>
+                            </div>
+
+                            <!-- Vehicle Info -->
+                            <div class="card mb-3 shadow-sm border-0">
+                                <div class="card-header bg-white fw-semibold d-flex align-items-center">
+                                    <i class="fas fa-bus text-success me-2"></i>
+                                    Vehicle Information
+                                </div>
+
+                                <div class="card-body">
+                                    <div class="row align-items-center g-3">
+
+                                        <!-- Vehicle Image -->
+                                        <div class="col-auto">
+                                            <img src="<?php echo $vehicleImage; ?>"
+                                                 class="rounded-3 border"
+                                                 style="width: 220px; height: 110px; object-fit: cover;"
+                                                 alt="Vehicle">
+                                        </div>
+
+                                        <!-- Vehicle Details -->
+                                        <div class="col">
+                                            <div class="d-flex flex-wrap align-items-center mb-1">
+                                                <h5 class="mb-0 fw-bold text-dark me-2">
+                                                    <?php echo $row->v_name; ?>
+                                                </h5>
+                                                <span class="badge bg-light text-dark border">
+                        <?php echo $row->v_category; ?>
+                    </span>
+                                            </div>
+
+                                            <div class="text-muted small font-monospace mb-2">
+                                                <?php echo $row->v_reg_no; ?>
+                                            </div>
+
+                                            <div class="d-flex flex-wrap gap-3 small text-muted">
+                                                <div>
+                                                    <i class="fas fa-gas-pump me-1 text-secondary"></i>
+                                                    <?php echo $row->v_fuel; ?>
                                                 </div>
                                                 <div>
-                                                    <div class="font-weight-bold text-dark"><?php echo $row->first_name . ' ' . $row->last_name; ?></div>
-                                                    <div class="small text-muted"><?php echo $row->phone; ?></div>
-                                                </div>
-                                            </div>
-                                            <div class="small text-muted mb-1"><i class="fas fa-envelope mr-2 text-gray-400"></i> <?php echo $row->email; ?></div>
-                                            <div class="small text-muted"><i class="fas fa-map-marker-alt mr-2 text-gray-400"></i> <?php echo $row->address; ?></div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Vehicle & Trip Details -->
-                                <div class="col-lg-8 mb-3">
-                                    <div class="card border-0 shadow-sm h-100">
-                                        <div class="card-body p-3">
-                                            <h6 class="text-uppercase text-muted small font-weight-bold mb-3 border-bottom pb-2">Vehicle & Trip</h6>
-                                            
-                                            <div class="row">
-                                                <div class="col-md-5 border-right">
-                                                    <div class="d-flex mb-3">
-                                                        <img src="<?php echo $vehicleImage; ?>" class="rounded mr-3" style="width: 300px; height: 140px; object-fit: cover;" alt="vehicle image">
-                                                        <div>
-                                                            <div class="font-weight-bold text-dark"><?php echo $row->v_name; ?></div>
-                                                            <div class="small text-muted"><?php echo $row->v_reg_no; ?></div>
-                                                            <div class="badge badge-light border mt-1"><?php echo $row->v_category; ?></div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="small text-muted">
-                                                        <i class="fas fa-gas-pump mr-1"></i> <?php echo $row->v_fuel; ?> | 
-                                                        <i class="fas fa-chair mr-1"></i> <?php echo $row->v_capacity; ?> Seats
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="col-md-7">
-                                                    <div class="row small mb-2">
-                                                        <div class="col-6">
-                                                            <label class="text-muted mb-0 font-weight-bold">From</label>
-                                                            <input type="text" id="from_datetime" name="from_datetime" class="form-control form-control-sm book-from-date" value="<?php echo date('Y-m-d H:i', strtotime($row->from_datetime)); ?>">
-                                                        </div>
-                                                        <div class="col-6">
-                                                            <label class="text-muted mb-0 font-weight-bold">To</label>
-                                                            <input type="text" id="to_datetime" name="to_datetime" class="form-control form-control-sm book-to-date" value="<?php echo date('Y-m-d', strtotime($row->to_datetime)); ?>">
-                                                        </div>
-                                                    </div>
-
-                                                    <div class="row small mb-2">
-                                                        <div class="col-6">
-                                                            <label class="text-muted mb-0 font-weight-bold">Pickup</label>
-                                                            <div class="input-group input-group-sm" onclick="openMap('pickup')">
-                                                                <div class="input-group-prepend">
-                                                                    <span class="input-group-text bg-success text-white"><i class="fas fa-map-marker-alt"></i></span>
-                                                                </div>
-                                                                <input type="text" id="pickup_location" name="pickup_location" class="form-control form-control-sm pickup-input" value="<?php echo htmlspecialchars($row->pickup_location); ?>" required placeholder="Click to select on map" readonly style="background-color: #fff; cursor: pointer;">
-                                                            </div>
-                                                        </div>
-                                                        <div class="col-6">
-                                                            <label class="text-muted mb-0 font-weight-bold">Drop</label>
-                                                            <div class="input-group input-group-sm" onclick="openMap('drop')">
-                                                                <div class="input-group-prepend">
-                                                                    <span class="input-group-text bg-danger text-white"><i class="fas fa-map-marker-alt"></i></span>
-                                                                </div>
-                                                                <input type="text" id="drop_location" name="drop_location" class="form-control form-control-sm drop-input" value="<?php echo htmlspecialchars($row->drop_location); ?>" required placeholder="Click to select on map" readonly style="background-color: #fff; cursor: pointer;">
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <!-- Map Container (Initially Hidden) -->
-                                                    <div id="map-container" style="display:none; position: relative;" class="mb-3 mt-2">
-                                                        <div id="map" class="map-container"></div>
-                                                        
-                                                        <!-- Route Info -->
-                                                        <div id="route-info" class="alert alert-info text-center py-2 mb-2" style="display:none;">
-                                                            <i class="fas fa-route"></i> 
-                                                            <strong>Distance:</strong> <span class="route-dist">0 km</span> &nbsp;|&nbsp; 
-                                                            <i class="fas fa-car"></i> <strong>Est. Time:</strong> <span class="route-time">0 min</span>
-                                                        </div>
-
-                                                        <div class="text-center">
-                                                            <button type="button" class="btn btn-sm btn-secondary" onclick="hideMap()">
-                                                                <i class="fas fa-check"></i> Done / Close Map
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <div class="bg-light p-2 rounded small text-muted mt-2 border text-truncate" title="<?php echo htmlspecialchars($row->purpose); ?>">
-                                                        <i class="fas fa-quote-left mr-1 text-gray-400"></i> <?php echo htmlspecialchars($row->purpose); ?>
-                                                    </div>
+                                                    <i class="fas fa-chair me-1 text-secondary"></i>
+                                                    <?php echo $row->v_capacity; ?> Seats
                                                 </div>
                                             </div>
                                         </div>
+
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Row 2: Action & Assignment -->
-                            <div class="row">
-                                <div class="col-12">
-                                    <div class="card border-0 shadow-sm mb-3">
-                                        <div class="card-body p-3">
-                                            <h6 class="text-uppercase text-muted small font-weight-bold mb-3 border-bottom pb-2">Action & Assignment</h6>
-                                            
-                                            <div class="row">
-                                                <div class="col-md-4 border-right">
-                                                    <div class="form-group mb-3">
-                                                        <label class="small font-weight-bold mb-1">Assign Driver</label>
-                                                        <select name="driver_id" id="driver_select" class="form-control form-control-sm custom-select">
-                                                            <option value="">-- Select Driver --</option>
-                                                            <?php foreach ($drivers as $driver): ?>
-                                                                <option value="<?php echo $driver->id; ?>" class="driver-option" data-driver-id="<?php echo $driver->id; ?>" <?php echo ($row->driver_id == $driver->id) ? 'selected' : ''; ?>>
-                                                                    <?php 
-                                                                    echo htmlspecialchars($driver->first_name . ' ' . $driver->last_name);
-                                                                    echo " (Exp: " . $driver->experience_years . "y)";
-                                                                    ?>
-                                                                </option>
-                                                            <?php endforeach; ?>
-                                                        </select>
-                                                        <div id="driver_warning" class="text-danger small mt-1" style="display:none; font-weight:bold;"></div>
-                                                    </div>
-                                                    <div class="d-flex justify-content-between align-items-center">
-                                                        <span class="small text-muted">Current Status:</span>
-                                                        <span class="badge badge-pill badge-<?php echo ($row->status == 'PENDING' ? 'warning' : ($row->status == 'APPROVED' ? 'success' : 'danger')); ?> px-3"><?php echo $row->status; ?></span>
-                                                    </div>
-                                                </div>
 
-                                                <div class="col-md-5 border-right">
-                                                    <div class="form-group mb-0 h-100">
-                                                        <label class="small font-weight-bold mb-1">Admin Remarks</label>
-                                                        <textarea name="admin_remarks" class="form-control form-control-sm h-75" placeholder="Enter any remarks or notes for this booking..."></textarea>
-                                                    </div>
-                                                </div>
+                            <!-- Action Console -->
+                            <div class="card">
+                                <div class="card-header bg-light"><i class="fas fa-cogs me-2"></i> Action Console</div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold small text-muted">Assign Driver</label>
+                                        <select name="driver_id" id="driver_select" class="form-select">
+                                            <option value="">-- Select Driver --</option>
+                                            <?php foreach ($drivers as $driver): ?>
+                                                <option value="<?php echo $driver->id; ?>" class="driver-option" data-driver-id="<?php echo $driver->id; ?>" <?php echo ($row->driver_id == $driver->id) ? 'selected' : ''; ?>>
+                                                    <?php 
+                                                    echo htmlspecialchars($driver->first_name . ' ' . $driver->last_name);
+                                                    echo " (Exp: " . $driver->experience_years . "y)";
+                                                    ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <div id="driver_warning" class="text-danger small mt-1 fw-bold" style="display:none;"></div>
+                                    </div>
 
-                                                <div class="col-md-3 d-flex flex-column justify-content-center">
-                                                    <button type="submit" name="approve_booking" value="Approved" class="btn btn-success btn-sm btn-block font-weight-bold shadow-sm mb-2" onclick="return validateApprove()">
-                                                        <i class="fas fa-check mr-1"></i> Approve / Update
-                                                    </button>
-                                                    <button type="submit" name="approve_booking" value="Cancelled" class="btn btn-outline-danger btn-sm btn-block font-weight-bold shadow-sm">
-                                                        <i class="fas fa-times mr-1"></i> Reject
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold small text-muted">Admin Remarks</label>
+                                        <textarea name="admin_remarks" class="form-control" rows="3" placeholder="Enter notes..."></textarea>
+                                    </div>
+
+                                    <div class="d-grid gap-2">
+                                        <button type="submit" name="approve_booking" value="Approved" class="btn btn-success fw-bold shadow-sm" onclick="return validateApprove()">
+                                            <i class="fas fa-check-circle me-2"></i> Approve Booking
+                                        </button>
+                                        <button type="submit" name="approve_booking" value="Cancelled" class="btn btn-outline-danger fw-bold">
+                                            <i class="fas fa-times-circle me-2"></i> Reject Booking
+                                        </button>
                                     </div>
                                 </div>
                             </div>
-                        </form>
+
+                        </div>
                     </div>
-                </div>
+                </form>
             <?php } ?>
 
         </div>
@@ -628,16 +577,15 @@ if (isset($_POST['approve_booking'])) {
 <script>
     function validateApprove() {
         const driver = document.getElementById("driver_select").value;
-        if (driver === "") {
-            swal("Error!", "Please assign a driver before approving.", "error");
-            return false;
-        }
+        // Only require driver if approving
+        // We can't easily check which button was clicked here without more logic, 
+        // but the PHP side handles validation. 
+        // For client side, we can check if the active element is the approve button.
+        // However, simpler to let PHP handle it or just warn.
         return true;
     }
 
     // Reusing logic from user-confirm-booking.php (adapted for admin)
-    // Note: Paths to get-approved-dates.php need to be correct relative to the admin folder.
-    // Assuming get-approved-dates.php is in the 'usr' folder, we need '../usr/get-approved-dates.php'
     
     async function fetchBookedDates(vehicleId) {
         const res = await fetch(`../usr/get-approved-dates.php?v_id=${vehicleId}`);
@@ -650,11 +598,8 @@ if (isset($_POST['approve_booking'])) {
     }
     
     async function fetchBusyDrivers(start, end, excludeId) {
-        // Ensure we check the full day range
         let startFull = start;
         let endFull = end;
-        
-        // If start is just a date, append time. If it already has time, leave it.
         if (start.length === 10) startFull += ' 00:00:00';
         if (end.length === 10) endFull += ' 23:59:59';
         
@@ -693,20 +638,14 @@ if (isset($_POST['approve_booking'])) {
     }
 
     function buildFlatpickrOptions(approvedRanges, pendingRanges, minDate, enableTime = false) {
-        // Admin override: No disabled dates
-        // We still want to show the visual indicators (colors) but allow selection.
-        // So we pass an empty array to 'disable'.
-
         return {
             enableTime: enableTime,
             dateFormat: enableTime ? "Y-m-d H:i" : "Y-m-d",
             minDate: minDate,
-            disable: [], // Empty array = no disabled dates
+            disable: [], 
             onDayCreate: function (dObj, dStr, fp, dayElem) {
                 const date = dayElem.dateObj;
                 const dateString = flatpickr.formatDate(date, "Y-m-d");
-
-                // Check if the date is in approved ranges
                 for (const range of approvedRanges) {
                     const rFrom = range.book_from_date.substring(0, 10);
                     const rTo = range.book_to_date.substring(0, 10);
@@ -716,8 +655,6 @@ if (isset($_POST['approve_booking'])) {
                         break;
                     }
                 }
-
-                // Check if the date is in pending ranges
                 for (const range of pendingRanges) {
                     const rFrom = range.book_from_date.substring(0, 10);
                     const rTo = range.book_to_date.substring(0, 10);
@@ -738,36 +675,26 @@ if (isset($_POST['approve_booking'])) {
 
         if (!vehicleId || !fromInput || !toInput) return;
 
-        // Calculated date 15 days ago (or just use today for admin flexibility)
         const today = new Date();
         const pastDate = new Date(today);
-        pastDate.setDate(today.getDate() - 30); // Allow admin to see/edit past bookings more freely
+        pastDate.setDate(today.getDate() - 30); 
         const minDateStr = pastDate.toISOString().split('T')[0];
         
-        // Initial check for driver availability based on loaded dates
         if (fromInput.value && toInput.value) {
             updateDriverAvailability(fromInput.value, toInput.value);
         }
 
         Promise.all([fetchBookedDates(vehicleId), fetchPendingDates(vehicleId)]).then(([approvedRanges, pendingRanges]) => {
-            // Sort approvedRanges by date
             approvedRanges.sort((a, b) => new Date(a.book_from_date) - new Date(b.book_from_date));
 
-            // Enable time for From Date picker
             const fromPicker = flatpickr(fromInput, buildFlatpickrOptions(approvedRanges, pendingRanges, minDateStr, true));
-            
-            // Initialize the To Date picker with similar options (no time)
             const toOptions = buildFlatpickrOptions(approvedRanges, pendingRanges, minDateStr, false);
             const toPicker = flatpickr(toInput, toOptions);
 
-            // Update To Date minDate when From Date changes
             fromPicker.config.onChange.push(function(selectedDates, dateStr) {
                 if (selectedDates.length > 0) {
-                    // Extract just the date part for minDate
                     const dateOnly = dateStr.split(' ')[0];
                     toPicker.set('minDate', dateOnly);
-
-                    // Check driver availability when dates change
                     const toDate = toInput.value;
                     if (toDate) {
                          updateDriverAvailability(dateStr, toDate);
@@ -794,8 +721,8 @@ if (isset($_POST['approve_booking'])) {
     let mapSelectionStep = 'pickup';
 
     function openMap(type) {
-        const mapContainer = document.getElementById('map-container');
-        mapContainer.style.display = 'block';
+        // const mapContainer = document.getElementById('map-container');
+        // mapContainer.style.display = 'block'; // No longer needed
         
         mapSelectionStep = type;
         
@@ -804,11 +731,18 @@ if (isset($_POST['approve_booking'])) {
         } else {
             setTimeout(() => map.invalidateSize(), 100);
         }
+        
+        // Optional: Scroll to map
+        document.getElementById('map-container').scrollIntoView({behavior: "smooth"});
+
+        if(type === 'pickup') {
+            swal("Select Pickup", "Click on the map or search to set Pickup Location", "info");
+        } else {
+            swal("Select Drop", "Click on the map or search to set Drop Location", "info");
+        }
     }
     
-    function hideMap() {
-        document.getElementById('map-container').style.display = 'none';
-    }
+    // function hideMap() { ... } // Removed
 
     function initMap() {
         // Default to Colombo
@@ -991,7 +925,7 @@ if (isset($_POST['approve_booking'])) {
                 pickupLatLng = L.latLng(lat, lng);
                 
                 updateRoute();
-                hideMap(); // Auto close for pickup
+                // hideMap(); // Removed auto-close
                 
             } else {
                 if (dropMarker) map.removeLayer(dropMarker);
@@ -1051,8 +985,8 @@ if (isset($_POST['approve_booking'])) {
 
     document.addEventListener('DOMContentLoaded', function() {
         initDatePickers();
+        initMap(); // Initialize map on load
         
-        // Add listener for driver selection change
         document.getElementById('driver_select').addEventListener('change', function() {
             const selectedOption = this.options[this.selectedIndex];
             const warningMsg = document.getElementById('driver_warning');
