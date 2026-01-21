@@ -46,157 +46,212 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>User Dashboard - Vehicle Booking System</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+    
+    <!-- Include Global Theme -->
+    <?php include("../vendor/inc/theme-config.php"); ?>
+    
     <style>
         body {
-            background: linear-gradient(135deg, #e0f7fa, #f8f9fa);
-            font-family: 'Segoe UI', sans-serif;
+            background-color: #fff; /* Override theme background for a cleaner dashboard */
         }
-
-        .hover-translate {
-            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
         }
-
-        .hover-translate:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+        
+        .sidebar {
+            width: 260px;
+            background-color: var(--primary-color);
+            color: #fff;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
         }
-
-        .card {
-            border-radius: 1rem;
+        
+        .sidebar-header {
+            text-align: center;
+            margin-bottom: 30px;
         }
-
-        .dashboard-header {
+        
+        .sidebar-logo {
+            width: 80px;
+            margin-bottom: 10px;
+        }
+        
+        .sidebar-nav .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 5px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+        }
+        
+        .sidebar-nav .nav-link i {
+            margin-right: 15px;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .sidebar-nav .nav-link:hover, .sidebar-nav .nav-link.active {
+            background-color: var(--secondary-color);
+            color: #fff;
+            font-weight: 600;
+        }
+        
+        .sidebar-footer {
+            margin-top: auto;
+            text-align: center;
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+        
+        .content-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 30px;
         }
-
-        .profile-card {
-            background-color: #ffffff;
-            border: 1px solid #dee2e6;
+        
+        .profile-dropdown {
+            cursor: pointer;
+        }
+        
+        .profile-dropdown .dropdown-menu {
             border-radius: 10px;
-            padding: 10px 15px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border: none;
         }
-
-        .profile-card h6 {
-            margin: 0;
-            font-weight: 600;
-        }
-
-        .vehicle-card img {
-            height: 200px;
-            object-fit: cover;
-            border-radius: 10px 10px 0 0;
-        }
-
-        .vehicle-card .card {
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-        }
-
-        @media (max-width: 576px) {
-            .dashboard-header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
+        
+        #dynamicContent {
+            background: #fff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
         }
     </style>
 </head>
 
 <body>
-<div class="container py-4">
-    <!-- Header -->
-    <div class="dashboard-header mb-4">
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
-            <div>
-                <h2 class="fw-bold text-dark mb-1">User Dashboard</h2>
-                <p class="text-muted mb-0">Welcome to the Vehicle Booking System</p>
-            </div>
+<div class="dashboard-container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <img src="https://www.cmpdi.co.in/sites/default/files/cmpdi_new_logo_10012025.png" alt="Logo" class="sidebar-logo">
+            <h5 class="mb-0">CMPDI RI-4</h5>
+            <small>Vehicle Booking</small>
         </div>
-
-        <div class="profile-card d-flex align-items-center gap-3 p-2 px-3 bg-white shadow-sm rounded-pill border border-light hover-translate"
-             id="loadProfileBtn" style="cursor:pointer;">
-            <i class="fas fa-user-circle fa-2x text-primary"></i>
-            <div class="text-start">
-                <?php if ($user): ?>
-                    <h6 class="mb-0 text-dark fw-semibold"><?php echo htmlspecialchars($user->first_name . ' ' . $user->last_name); ?></h6>
-                    <small class="text-muted"><?php echo htmlspecialchars($user->phone ?: $user->email); ?></small>
-                <?php else: ?>
-                    <h6 class="mb-0 text-dark fw-semibold">User</h6>
-                    <small class="text-muted">No info available</small>
-                <?php endif; ?>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- Dashboard Section -->
-    <div class="dashboard-section py-4">
-        <div class="row justify-content-center g-4">
-
-            <!-- My Bookings Card -->
-            <div class="col-sm-10 col-md-6 col-lg-4">
-                <div class="card hover-translate bg-success text-white h-100 shadow-sm text-center" id="loadBookingsBtn" style="cursor:pointer;">
-                    <div class="card-body d-flex flex-column align-items-center justify-content-center">
-                        <i class="fas fa-clipboard-list fa-2x mb-3"></i>
-                        <h5 class="fw-semibold">My Bookings</h5>
-                    </div>
-                    <div class="card-footer text-white small text-center">
-                        View Bookings <i class="fas fa-angle-right ms-1"></i>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Book Vehicle Card -->
-            <div class="col-sm-10 col-md-6 col-lg-4">
-                <div class="card hover-translate bg-warning text-dark h-100 shadow-sm text-center" id="loadBookingFormBtn" style="cursor:pointer;">
-                    <div class="card-body d-flex flex-column align-items-center justify-content-center">
-                        <i class="fas fa-car-side fa-2x mb-3"></i>
-                        <h5 class="fw-semibold">Book Vehicle</h5>
-                    </div>
-                    <div class="card-footer text-dark small text-center">
-                        Book Now <i class="fas fa-angle-right ms-1"></i>
-                    </div>
-                </div>
-            </div>
-
+        
+        <ul class="nav flex-column sidebar-nav">
+            <li class="nav-item">
+                <a class="nav-link active" href="#" id="loadBookingFormBtn">
+                    <i class="fas fa-car"></i> Book Vehicle
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" id="loadBookingsBtn">
+                    <i class="fas fa-clipboard-list"></i> My Bookings
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" id="loadProfileBtn">
+                    <i class="fas fa-user-circle"></i> My Profile
+                </a>
+            </li>
+        </ul>
+        
+        <div class="sidebar-footer">
+            <a href="?logout=true" class="btn btn-sm btn-outline-light w-100">
+                <i class="fas fa-sign-out-alt mr-2"></i> Logout
+            </a>
         </div>
     </div>
-
-    <!-- Dynamic Content Container -->
-    <div class="mt-5" id="dynamicContent"></div>
-
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="content-header">
+            <h2 class="fw-bold text-dark mb-0" id="pageTitle">Book a Vehicle</h2>
+            
+            <div class="dropdown profile-dropdown">
+                <div class="d-flex align-items-center" data-toggle="dropdown">
+                    <div class="text-right mr-3">
+                        <h6 class="mb-0 text-dark fw-semibold"><?php echo htmlspecialchars($user->first_name ?? 'User'); ?></h6>
+                        <small class="text-muted">Employee</small>
+                    </div>
+                    <i class="fas fa-user-circle fa-2x text-primary"></i>
+                </div>
+                <div class="dropdown-menu dropdown-menu-right">
+                    <a class="dropdown-item" href="#" id="loadProfileBtnDropdown">
+                        <i class="fas fa-user mr-2"></i> Profile
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item text-danger" href="?logout=true">
+                        <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dynamic Content Container -->
+        <div id="dynamicContent">
+            <!-- Content will be loaded here via AJAX -->
+        </div>
+    </div>
 </div>
 
 <!-- Scripts -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
     $(document).ready(function () {
-        // Load the booking page (usr-book-vehicle.php) by default on page load
-        $('#dynamicContent').load('usr-book-vehicle.php');
+        const pageTitles = {
+            'usr-book-vehicle.php': 'Book a Vehicle',
+            'user-view-booking.php': 'My Bookings',
+            'user-view-profile.php': 'My Profile'
+        };
 
-        // When "My Bookings" card is clicked
-        $('#loadBookingsBtn').on('click', function () {
+        function loadContent(page, navLink) {
+            // Set active class on nav link
+            $('.sidebar-nav .nav-link').removeClass('active');
+            $(navLink).addClass('active');
+            
+            // Update page title
+            $('#pageTitle').text(pageTitles[page] || 'Dashboard');
+
+            // Load content
             $('#dynamicContent').html('<div class="text-center py-5"><div class="spinner-border text-success" role="status"></div></div>');
-            $('#dynamicContent').load('user-view-booking.php');
+            $('#dynamicContent').load(page, function(response, status, xhr) {
+                if (status == "error") {
+                    $('#dynamicContent').html('<div class="alert alert-danger">Sorry, but there was an error loading the content.</div>');
+                }
+            });
+        }
+
+        // Load the booking page by default
+        loadContent('usr-book-vehicle.php', '#loadBookingFormBtn');
+
+        // Sidebar navigation clicks
+        $('#loadBookingFormBtn').on('click', function (e) {
+            e.preventDefault();
+            loadContent('usr-book-vehicle.php', this);
         });
 
-        // When "Book Vehicle" card is clicked
-        $('#loadBookingFormBtn').on('click', function () {
-            $('#dynamicContent').html('<div class="text-center py-5"><div class="spinner-border text-warning" role="status"></div></div>');
-            $('#dynamicContent').load('usr-book-vehicle.php');
+        $('#loadBookingsBtn').on('click', function (e) {
+            e.preventDefault();
+            loadContent('user-view-booking.php', this);
         });
 
-        // When "User Profile" card is clicked
-        $('#loadProfileBtn').on('click', function () {
-            $('#dynamicContent').html('<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>');
-            $('#dynamicContent').load('user-view-profile.php');
+        $('#loadProfileBtn, #loadProfileBtnDropdown').on('click', function (e) {
+            e.preventDefault();
+            loadContent('user-view-profile.php', '#loadProfileBtn');
         });
 
     });
