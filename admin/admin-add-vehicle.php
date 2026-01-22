@@ -133,14 +133,118 @@ if (isset($_SESSION['err'])) {
 
 <!DOCTYPE html>
 <html lang="en">
-<?php include('vendor/inc/head.php');?>
+<head>
+    <meta charset="UTF-8">
+    <title>Add Vehicle | Vehicle Booking System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Include Global Theme -->
+    <?php include("../vendor/inc/theme-config.php"); ?>
+    
+    <style>
+        body {
+            background-color: #fff;
+        }
+        
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        /* Sidebar styles are in sidebar.php */
+        
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            margin-left: 260px; /* Width of sidebar */
+            background-color: #f8f9fa;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+        }
+        
+        .card-header {
+            background-color: #fff;
+            border-bottom: 1px solid #eee;
+            padding: 20px;
+            border-radius: 15px 15px 0 0 !important;
+        }
+        
+        .form-control, .custom-select {
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+            padding: 10px 15px;
+            height: auto;
+        }
+        
+        .form-control:focus, .custom-select:focus {
+            box-shadow: 0 0 0 3px rgba(0, 121, 107, 0.1);
+            border-color: var(--secondary-color);
+        }
+        
+        .btn-add {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 30px;
+            font-weight: 600;
+            box-shadow: 0 4px 10px rgba(0, 77, 64, 0.2);
+            transition: all 0.3s;
+        }
+        
+        .btn-add:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 77, 64, 0.3);
+            color: white;
+        }
+        
+        .custom-file-label {
+            border-radius: 10px;
+            padding: 10px 15px;
+            height: auto;
+        }
+        
+        .custom-file-label::after {
+            height: 100%;
+            padding: 10px 15px;
+            border-radius: 0 10px 10px 0;
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
 
-<body id="page-top" style="background-color: #f8f9fc;">
+<body id="page-top">
 
-<div id="wrapper">
+<div class="dashboard-container">
+    <!-- Sidebar -->
+    <?php include("vendor/inc/sidebar.php"); ?>
 
-    <div id="content-wrapper">
+    <div class="main-content">
         <div class="container-fluid mt-4">
+            
+            <?php if ($succ) { ?>
+                <script src="vendor/js/swal.js"></script>
+                <script>
+                    setTimeout(function () {
+                        swal("Success!", "<?php echo $succ; ?>", "success");
+                    }, 100);
+                </script>
+            <?php } ?>
+
+            <?php if ($err) { ?>
+                <script src="vendor/js/swal.js"></script>
+                <script>
+                    setTimeout(function () {
+                        swal("Failed!", "<?php echo $err; ?>", "error");
+                    }, 100);
+                </script>
+            <?php } ?>
+
             <div class="card shadow border-0 rounded-lg">
                 <div class="card-header bg-white py-3 d-flex align-items-center border-bottom-0">
                     <a href="javascript:void(0);" onclick="window.location.replace('admin-view-vehicle.php')" class="btn btn-sm btn-outline-secondary font-weight-bold rounded-pill px-3 mr-3"><i class="fas fa-arrow-left mr-1"></i> Back</a>
@@ -303,7 +407,7 @@ if (isset($_SESSION['err'])) {
                                                 <label class="custom-file-label" for="v_dpic">Choose file...</label>
                                             </div>
                                             <div class="mt-3 text-center">
-                                                <img id="imagePreview" src="vendor/img/placeholder.png" alt="Image Preview" class="img-thumbnail shadow-sm" style="max-width: 200px; max-height: 150px; display: none;" />
+                                                <img id="imagePreview" src="../vendor/img/placeholder.png" alt="Image Preview" class="img-thumbnail shadow-sm" style="max-width: 200px; max-height: 150px; display: none;" />
                                             </div>
                                         </div>
                                     </div>
@@ -318,7 +422,7 @@ if (isset($_SESSION['err'])) {
                         </div>
 
                         <div class="text-center mb-4">
-                            <button type="submit" name="add_veh" class="btn btn-success btn-lg px-5 font-weight-bold shadow-sm rounded-pill">
+                            <button type="submit" name="add_veh" class="btn btn-add btn-lg px-5 font-weight-bold shadow-sm rounded-pill">
                                 <i class="fas fa-plus-circle mr-2"></i> Add Vehicle
                             </button>
                         </div>
@@ -341,23 +445,6 @@ if (isset($_SESSION['err'])) {
 <script src="vendor/js/demo/datatables-demo.js"></script>
 <script src="vendor/js/demo/chart-area-demo.js"></script>
 <script src="vendor/js/swal.js"></script>
-
-<!-- Alerts Logic -->
-<?php if ($succ): ?>
-    <script>
-        $(document).ready(function() {
-            swal("Success!", "<?php echo $succ; ?>", "success");
-        });
-    </script>
-<?php endif; ?>
-
-<?php if ($err): ?>
-    <script>
-        $(document).ready(function() {
-            swal("Failed!", "<?php echo $err; ?>", "error");
-        });
-    </script>
-<?php endif; ?>
 
 <script>
     function previewImage(event) {
