@@ -98,21 +98,117 @@ if (isset($_POST['update_user'])) {
         }
     }
 }
+
+// Handle Disable User Logic
+if (isset($_POST['disable_user'])) {
+    $u_id = $_GET['u_id'];
+    global $mysqli;
+    $stmt = $mysqli->prepare("UPDATE users SET is_active = -1 WHERE id = ?");
+    $stmt->bind_param('i', $u_id);
+    if ($stmt->execute()) {
+        $succ = "User Account Disabled Successfully";
+        echo "<script>setTimeout(function(){ window.location.href = 'admin-view-user.php'; }, 1500);</script>";
+    } else {
+        $err = "Failed to disable user.";
+    }
+    $stmt->close();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 
-<?php include('vendor/inc/head.php'); ?>
+<head>
+    <meta charset="UTF-8">
+    <title>Manage User | Vehicle Booking System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Include Global Theme -->
+    <?php include("../vendor/inc/theme-config.php"); ?>
+    
+    <style>
+        body {
+            background-color: #fff;
+        }
+        
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        /* Sidebar styles are in sidebar.php */
+        
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            margin-left: 260px; /* Width of sidebar */
+            background-color: #f8f9fa;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+        }
+        
+        .card-header {
+            background-color: #fff;
+            border-bottom: 1px solid #eee;
+            padding: 20px;
+            border-radius: 15px 15px 0 0 !important;
+        }
+        
+        .form-control, .custom-select {
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+            padding: 10px 15px;
+            height: auto;
+        }
+        
+        .form-control:focus, .custom-select:focus {
+            box-shadow: 0 0 0 3px rgba(0, 121, 107, 0.1);
+            border-color: var(--secondary-color);
+        }
+        
+        .btn-update {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 30px;
+            font-weight: 600;
+            box-shadow: 0 4px 10px rgba(0, 77, 64, 0.2);
+            transition: all 0.3s;
+            margin: 0 10px;
+        }
+        
+        .btn-update:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 77, 64, 0.3);
+            color: white;
+        }
+        
+        .btn-disable {
+            border-radius: 50px;
+            padding: 12px 30px;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin: 0 10px;
+        }
+    </style>
+</head>
 
-<body id="page-top" style="background-color: #f8f9fc;">
+<body id="page-top">
 
-<div id="wrapper">
+<div class="dashboard-container">
+    <!-- Sidebar -->
+    <?php include("vendor/inc/sidebar.php"); ?>
 
-    <div id="content-wrapper" class="d-flex flex-column">
-
+    <div class="main-content">
         <div class="container-fluid mt-4">
 
             <?php if (isset($succ)) { ?>
+                <script src="vendor/js/swal.js"></script>
                 <script>
                     setTimeout(function () {
                         swal("Success!", "<?php echo $succ; ?>", "success");
@@ -121,6 +217,7 @@ if (isset($_POST['update_user'])) {
             <?php } ?>
 
             <?php if (isset($err)) { ?>
+                <script src="vendor/js/swal.js"></script>
                 <script>
                     setTimeout(function () {
                         swal("Failed!", "<?php echo $err; ?>", "error");
@@ -159,8 +256,6 @@ if (isset($_POST['update_user'])) {
                         // Fetch user's remark (if any) - specifically for approval view
                         $user_remark = "";
                         if (isset($_GET['action']) && $_GET['action'] == 'approve') {
-                            // Fetch the latest remark made by this user about themselves (USER entity)
-                            // Or just any remark linked to this user entity where author is the user
                             $ur_stmt = $mysqli->prepare("SELECT remark FROM entity_remarks WHERE entity_type = 'USER' AND entity_id = ? AND user_id = ? ORDER BY created_at DESC LIMIT 1");
                             $ur_stmt->bind_param('ii', $u_id, $u_id);
                             $ur_stmt->execute();
@@ -300,10 +395,16 @@ if (isset($_POST['update_user'])) {
                                 </div>
                             </div>
 
-                            <div class="form-group text-center mt-4 mb-5">
-                                <button type="submit" name="update_user" class="btn btn-success btn-lg px-5 font-weight-bold shadow-sm rounded-pill">
+                            <div class="form-group text-center mt-4 mb-5 d-flex justify-content-center gap-3">
+                                <button type="submit" name="update_user" class="btn btn-update btn-lg px-5">
                                     <?php echo (isset($_GET['action']) && $_GET['action'] == 'approve') ? '<i class="fas fa-check-circle mr-2"></i> Approve & Save' : '<i class="fas fa-save mr-2"></i> Update User'; ?>
                                 </button>
+                                
+                                <?php if ($row->is_active == 1): ?>
+                                    <button type="submit" name="disable_user" class="btn btn-outline-danger btn-disable btn-lg px-4" onclick="return confirmDisable()">
+                                        <i class="fas fa-ban mr-2"></i> Disable User
+                                    </button>
+                                <?php endif; ?>
                             </div>
                         </form>
                     <?php } ?>
@@ -352,6 +453,10 @@ if (isset($_POST['update_user'])) {
         } else {
             driverFields.style.display = "none";
         }
+    }
+    
+    function confirmDisable() {
+        return confirm("Are you sure you want to disable this user account? They will no longer be able to login.");
     }
 </script>
 

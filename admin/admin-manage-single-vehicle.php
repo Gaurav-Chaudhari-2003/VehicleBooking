@@ -136,53 +136,100 @@ if (isset($_POST['update_veh'])) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Review Booking | Vehicle Booking System</title>
+    <title>Update Vehicle | Vehicle Booking System</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+    
     <!-- Include Global Theme -->
     <?php include("../vendor/inc/theme-config.php"); ?>
-
-    <!-- Flatpickr CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Leaflet Control Geocoder CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
-    <!-- Leaflet Routing Machine CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
-
+    
     <style>
-        body { background-color: #fff; }
-        .main-content { flex: 1; padding: 30px; margin-left: 260px; background-color: #f8f9fa; }
-
-        .card { border: none; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .card-header { background-color: #fff; border-bottom: 1px solid #eee; padding: 15px 20px; border-radius: 15px 15px 0 0 !important; font-weight: 700; color: var(--primary-color); }
-
-        /* Form Styles */
-        .form-control, .form-select { border-radius: 10px; padding: 10px 15px; border: 1px solid #ddd; }
-        .form-control:focus, .form-select:focus { box-shadow: 0 0 0 3px rgba(0, 121, 107, 0.1); border-color: var(--secondary-color); }
-
-        .card:hover {
+        body {
+            background-color: #fff;
+        }
+        
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        /* Sidebar styles are in sidebar.php */
+        
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            margin-left: 260px; /* Width of sidebar */
+            background-color: #f8f9fa;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+        }
+        
+        .card-header {
+            background-color: #fff;
+            border-bottom: 1px solid #eee;
+            padding: 20px;
+            border-radius: 15px 15px 0 0 !important;
+        }
+        
+        .form-control, .custom-select {
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+            padding: 10px 15px;
+            height: auto;
+        }
+        
+        .form-control:focus, .custom-select:focus {
+            box-shadow: 0 0 0 3px rgba(0, 121, 107, 0.1);
+            border-color: var(--secondary-color);
+        }
+        
+        .btn-update {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 30px;
+            font-weight: 600;
+            box-shadow: 0 4px 10px rgba(0, 77, 64, 0.2);
+            transition: all 0.3s;
+        }
+        
+        .btn-update:hover {
             transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 77, 64, 0.3);
+            color: white;
         }
-
-        .card img {
-            background: #f8f9fa;
+        
+        .custom-file-label {
+            border-radius: 10px;
+            padding: 10px 15px;
+            height: auto;
         }
-
+        
+        .custom-file-label::after {
+            height: 100%;
+            padding: 10px 15px;
+            border-radius: 0 10px 10px 0;
+            background-color: #f8f9fa;
+        }
     </style>
 </head>
 
-<body id="page-top" style="background-color: #f8f9fc;">
+<body id="page-top">
 
-<div id="wrapper">
-    <!-- Main Content -->
+<div class="dashboard-container">
+    <!-- Sidebar -->
+    <?php include("vendor/inc/sidebar.php"); ?>
+
     <div class="main-content">
-        <!-- Sidebar -->
-        <?php include("vendor/inc/sidebar.php"); ?>
-        <div class="container-fluid mt-4">
+        <div class="container-fluid">
 
             <?php if ($succ) { ?>
+                <script src="vendor/js/swal.js"></script>
                 <script>
                     setTimeout(function () {
                         swal("Success!", "<?php echo $succ; ?>", "success");
@@ -191,6 +238,7 @@ if (isset($_POST['update_veh'])) {
             <?php } ?>
 
             <?php if ($err) { ?>
+                <script src="vendor/js/swal.js"></script>
                 <script>
                     setTimeout(function () {
                         swal("Failed!", "<?php echo $err; ?>", "error");
@@ -198,15 +246,21 @@ if (isset($_POST['update_veh'])) {
                 </script>
             <?php } ?>
 
-            <div class="card shadow border-0 rounded-lg mb-4">
-                <div class="card-header bg-white py-3 d-flex align-items-center border-bottom-0">
-                    <a href="javascript:void(0);" onclick="window.location.replace('admin-view-vehicle.php')" class="btn btn-sm btn-outline-secondary font-weight-bold rounded-pill px-3 mr-3"><i class="fas fa-arrow-left mr-1"></i> Back</a>
-                    <h5 class="mb-0 font-weight-bold text-primary flex-grow-1 text-center" style="margin-right: 80px;">
-                        <i class="fas fa-edit mr-2"></i> Update Vehicle Details
-                    </h5>
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <a href="admin-view-vehicle.php" class="btn btn-outline-secondary rounded-pill px-3 me-3">
+                        <i class="fas fa-arrow-left me-2"></i> Back
+                    </a>
+                    <h3 class="d-inline-block align-middle fw-bold text-dark mb-0">Update Vehicle</h3>
                 </div>
+            </div>
 
-                <div class="card-body bg-light p-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0 text-primary fw-bold"><i class="fas fa-edit me-2"></i> Vehicle Details</h5>
+                </div>
+                <div class="card-body p-4">
                     <?php
                     $v_id = $_GET['v_id'];
                     // Fetch vehicle details with contract info
@@ -228,12 +282,12 @@ if (isset($_POST['update_veh'])) {
                             <div class="row">
                                 <!-- Left Column: Basic Info -->
                                 <div class="col-lg-6 mb-4">
-                                    <div class="card border-0 shadow-sm h-100">
-                                        <div class="card-body p-4">
+                                    <div class="card bg-light border-0 h-100">
+                                        <div class="card-body">
                                             <h6 class="text-uppercase text-muted small font-weight-bold mb-3 border-bottom pb-2">Basic Information</h6>
                                             
                                             <div class="text-center mb-4">
-                                                <img src="<?php echo $img; ?>" class="img-fluid rounded shadow-sm" style="max-height: 150px; object-fit: cover;">
+                                                <img src="<?php echo $img; ?>" id="imgPreview" class="img-fluid rounded shadow-sm" style="max-height: 150px; object-fit: cover;">
                                             </div>
 
                                             <div class="form-row">
@@ -288,7 +342,7 @@ if (isset($_POST['update_veh'])) {
                                             <div class="form-group">
                                                 <label class="small font-weight-bold">Update Image</label>
                                                 <div class="custom-file">
-                                                    <input type="file" class="custom-file-input" id="v_dpic" name="v_dpic" accept="image/*">
+                                                    <input type="file" class="custom-file-input" id="v_dpic" name="v_dpic" accept="image/*" onchange="previewImage(event)">
                                                     <label class="custom-file-label" for="v_dpic">Choose file...</label>
                                                 </div>
                                             </div>
@@ -298,7 +352,7 @@ if (isset($_POST['update_veh'])) {
 
                                 <!-- Right Column: Ownership & Contract -->
                                 <div class="col-lg-6 mb-4">
-                                    <div class="card border-0 shadow-sm h-100">
+                                    <div class="card bg-light border-0 h-100">
                                         <div class="card-body p-4">
                                             <h6 class="text-uppercase text-muted small font-weight-bold mb-3 border-bottom pb-2">Ownership & Contract</h6>
                                             
@@ -312,7 +366,7 @@ if (isset($_POST['update_veh'])) {
 
                                             <!-- Vendor Specific Fields -->
                                             <div id="vendor-fields" style="display: <?php echo ($row->ownership_type == 'VENDOR') ? 'block' : 'none'; ?>;" class="mt-3">
-                                                <div class="bg-light p-3 rounded border">
+                                                <div class="bg-white p-3 rounded border shadow-sm">
                                                     <h6 class="text-primary font-weight-bold mb-3 small text-uppercase">Vendor Information</h6>
                                                     <div class="form-row">
                                                         <div class="form-group col-md-6">
@@ -368,7 +422,7 @@ if (isset($_POST['update_veh'])) {
                             <!-- Remarks Section -->
                             <div class="row">
                                 <div class="col-12">
-                                    <div class="card border-0 shadow-sm">
+                                    <div class="card bg-light border-0">
                                         <div class="card-body p-4">
                                             <h6 class="text-uppercase text-muted small font-weight-bold mb-3 border-bottom pb-2">Admin Remarks</h6>
                                             <div class="form-group mb-0">
@@ -379,8 +433,8 @@ if (isset($_POST['update_veh'])) {
                                 </div>
                             </div>
 
-                            <div class="form-group text-center mt-4 mb-5">
-                                <button type="submit" name="update_veh" class="btn btn-success btn-lg px-5 font-weight-bold shadow-sm rounded-pill">
+                            <div class="form-group text-center mt-4 mb-2">
+                                <button type="submit" name="update_veh" class="btn btn-update btn-lg px-5">
                                     <i class="fas fa-save mr-2"></i> Update Vehicle
                                 </button>
                             </div>
@@ -390,20 +444,13 @@ if (isset($_POST['update_veh'])) {
             </div>
 
         </div>
-
     </div>
-
 </div>
-
-<a class="scroll-to-top rounded" href="#page-top">
-    <i class="fas fa-angle-up"></i>
-</a>
 
 <script src="vendor/jquery/jquery.min.js"></script>
 <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="vendor/jquery-easing/jquery.easing.min.js"></script>
 <script src="vendor/js/sb-admin.min.js"></script>
-<script src="vendor/js/swal.js"></script>
 
 <script>
     function toggleVendorFields() {
@@ -417,15 +464,19 @@ if (isset($_POST['update_veh'])) {
         }
     }
     
-    // File input label update
-    $(".custom-file-input").on("change", function() {
-        var fileName = $(this).val().split("\\").pop();
-        $(this).siblings(".custom-file-label").addClass("selected").html(fileName);
-    });
+    function previewImage(event) {
+        var reader = new FileReader();
+        reader.onload = function(){
+            var output = document.getElementById('imgPreview');
+            output.src = reader.result;
+        };
+        reader.readAsDataURL(event.target.files[0]);
+        
+        // Update label
+        var fileName = event.target.files[0].name;
+        event.target.nextElementSibling.innerText = fileName;
+    }
 </script>
-<style>
-    .main-content { flex: 1; padding: 30px; margin-left: 260px; background-color: #f8f9fa; }
-</style>
 
 </body>
 
