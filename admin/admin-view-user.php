@@ -88,7 +88,7 @@ if (isset($_GET['ajax_filter'])) {
             if ($row->role == 'ADMIN') $roleBadgeClass = 'bg-danger';
             elseif ($row->role == 'MANAGER') $roleBadgeClass = 'bg-primary';
             elseif ($row->role == 'DRIVER') $roleBadgeClass = 'bg-success';
-            elseif ($row->role == 'EMPLOYEE') $roleBadgeClass = 'bg-info text-dark';
+            elseif ($row->role == 'EMPLOYEE') $roleBadgeClass = 'bg-info';
             ?>
             <tr id="user-row-<?php echo $row->id; ?>">
                 <td><?php echo $cnt++; ?></td>
@@ -103,7 +103,7 @@ if (isset($_GET['ajax_filter'])) {
                 </td>
                 <td><?php echo $row->phone; ?></td>
                 <td><?php echo $row->address; ?></td>
-                <td><span class="badge <?php echo $roleBadgeClass; ?>"><?php echo $row->role; ?></span></td>
+                <td><span class="badge <?php echo $roleBadgeClass; ?> text-white"><?php echo $row->role; ?></span></td>
                 <td>
                     <?php if ($show_deactivated) { ?>
                         <button class="btn btn-sm btn-success rounded-pill px-3" onclick="performAction('activate', <?php echo $row->id; ?>)"><i class="fas fa-check me-1"></i> Reactivate</button>
@@ -173,6 +173,14 @@ $pending_stmt->execute();
 $pending_stmt->bind_result($pending_count);
 $pending_stmt->fetch();
 $pending_stmt->close();
+
+// Check for rejected users count
+$rejected_count_query = "SELECT COUNT(*) FROM users WHERE is_active = -2";
+$rejected_stmt = $mysqli->prepare($rejected_count_query);
+$rejected_stmt->execute();
+$rejected_stmt->bind_result($rejected_count);
+$rejected_stmt->fetch();
+$rejected_stmt->close();
 ?>
 
 <!DOCTYPE html>
@@ -253,6 +261,7 @@ $pending_stmt->close();
             border: 1px solid #ddd;
             padding: 5px 15px;
             font-size: 0.9rem;
+            margin: 0 30px;
         }
     </style>
 </head>
@@ -333,6 +342,15 @@ $pending_stmt->close();
                 </div>
             </div>
         </div>
+        
+        <!-- Show Rejected Users Button (Only if Pending=0 and Rejected>0) -->
+        <?php if ($pending_count == 0 && $rejected_count > 0): ?>
+        <div class="text-end mb-3">
+            <button class="btn btn-outline-danger rounded-pill btn-sm" onclick="$('#pendingApprovalsCard').show(); $('#rejectedSwitch').prop('checked', true).trigger('change'); $(this).hide();">
+                <i class="fas fa-user-times me-1"></i> View Rejected Users (<?php echo $rejected_count; ?>)
+            </button>
+        </div>
+        <?php endif; ?>
 
         <!-- Registered Users -->
         <div class="card">
@@ -392,7 +410,7 @@ $pending_stmt->close();
                                 if ($row->role == 'ADMIN') $roleBadgeClass = 'bg-danger';
                                 elseif ($row->role == 'MANAGER') $roleBadgeClass = 'bg-primary';
                                 elseif ($row->role == 'DRIVER') $roleBadgeClass = 'bg-success';
-                                elseif ($row->role == 'EMPLOYEE') $roleBadgeClass = 'bg-info text-dark';
+                                elseif ($row->role == 'EMPLOYEE') $roleBadgeClass = 'bg-info';
                                 ?>
                                 <tr id="user-row-<?php echo $row->id; ?>">
                                     <td class="ps-4"><?php echo $cnt++; ?></td>
@@ -406,12 +424,13 @@ $pending_stmt->close();
                                     </td>
                                     <td><?php echo $row->phone; ?></td>
                                     <td><?php echo $row->address; ?></td>
-                                    <td><span class="badge <?php echo $roleBadgeClass; ?>"><?php echo $row->role; ?></span></td>
+                                    <td><span class="badge <?php echo $roleBadgeClass; ?> text-white"><?php echo $row->role; ?></span></td>
                                     <td>
                                         <?php if ($show_deactivated) { ?>
                                             <button class="btn btn-sm btn-success rounded-pill px-3" onclick="performAction('activate', <?php echo $row->id; ?>)"><i class="fas fa-check me-1"></i> Reactivate</button>
                                         <?php } else { ?>
                                             <a href="admin-manage-single-usr.php?u_id=<?php echo $row->id; ?>" class="btn btn-sm btn-outline-primary rounded-pill px-3 me-1"><i class="fa fa-edit"></i> Edit</a>
+                                            <!-- Deactivate button removed from here as requested -->
                                         <?php } ?>
                                     </td>
                                 </tr>
