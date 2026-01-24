@@ -16,7 +16,8 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <!-- Include Global Theme -->
-    <!-- Note: This page is usually loaded via AJAX, but we include styles for direct access or fallback -->
+    <?php include("../vendor/inc/theme-config.php"); ?>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -25,6 +26,15 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
 
     <!-- Custom Styling -->
     <style>
+        body { background-color: #f4f7f6; }
+        .dashboard-container { display: flex; min-height: 100vh; }
+        
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            margin-left: 260px; /* Match sidebar width */
+        }
+
         /* Scoped styles for booking list */
         .vehicle-img { 
             height: 180px; 
@@ -125,152 +135,167 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
             padding: 6px 15px;
             font-weight: 600;
         }
+        
+        .content-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
     </style>
 </head>
 
 <body>
-<div class="container-fluid">
+<div class="dashboard-container">
+    <!-- Sidebar -->
+    <?php include("vendor/inc/sidebar.php"); ?>
 
-    <!-- Header -->
-    <div class="header-card d-flex justify-content-between align-items-center">
-        <div>
-            <h4 class="mb-1 fw-bold text-dark">My Bookings</h4>
-            <p class="text-muted mb-0 small">Manage and track your vehicle requests</p>
+    <div class="main-content">
+        <!-- Header -->
+        <div class="content-header">
+            <h2 class="fw-bold text-dark mb-0">My Bookings</h2>
+            <div class="d-flex align-items-center">
+                <div class="text-end me-3">
+                    <h6 class="mb-0 text-dark fw-semibold"><?php echo htmlspecialchars($_SESSION['u_fname'] ?? 'User'); ?></h6>
+                    <small class="text-muted">Employee</small>
+                </div>
+                <i class="fas fa-user-circle fa-2x text-primary"></i>
+            </div>
         </div>
-        <!-- Back button is handled by dashboard navigation usually, but kept for direct access -->
-        <!-- <a href="user-dashboard.php" class="btn btn-outline-secondary btn-sm rounded-pill px-3"><i class="fas fa-arrow-left me-1"></i> Back</a> -->
-    </div>
 
-    <!-- Booking Cards -->
-    <div class="row g-4" id="bookingCards">
-        <?php
-        // Updated query to match new schema: bookings, vehicles, users tables
-        $query = "
-            SELECT b.id as booking_id, b.from_datetime, b.to_datetime, b.status, b.created_at, b.purpose,
-               v.name as v_name, v.image as v_dpic, v.reg_no as v_regno,
-               u.first_name, u.last_name, u.phone
-            FROM bookings b 
-            JOIN vehicles v ON b.vehicle_id = v.id
-            JOIN users u ON b.user_id = u.id
-            WHERE u.id = ?
-            ORDER BY b.created_at DESC
-        ";
+        <div class="header-card d-flex justify-content-between align-items-center">
+            <div>
+                <h4 class="mb-1 fw-bold text-dark">Booking History</h4>
+                <p class="text-muted mb-0 small">Manage and track your vehicle requests</p>
+            </div>
+        </div>
 
-        $stmt = $mysqli->prepare($query);
-        $stmt->bind_param('i', $aid);
-        $stmt->execute();
-        $res = $stmt->get_result();
+        <!-- Booking Cards -->
+        <div class="row g-4" id="bookingCards">
+            <?php
+            // Updated query to match new schema: bookings, vehicles, users tables
+            $query = "
+                SELECT b.id as booking_id, b.from_datetime, b.to_datetime, b.status, b.created_at, b.purpose,
+                   v.name as v_name, v.image as v_dpic, v.reg_no as v_regno,
+                   u.first_name, u.last_name, u.phone
+                FROM bookings b 
+                JOIN vehicles v ON b.vehicle_id = v.id
+                JOIN users u ON b.user_id = u.id
+                WHERE u.id = ?
+                ORDER BY b.created_at DESC
+            ";
 
-        if ($res->num_rows > 0) {
-            while ($row = $res->fetch_object()) {
-                $imagePath = $projectFolder . 'vendor/img/' . ($row->v_dpic ?: 'placeholder.png');
-                
-                // Format Dates
-                $createdDate = date('d M Y, h:i A', strtotime($row->created_at));
-                $fromDate = date('d M Y, h:i A', strtotime($row->from_datetime));
-                $toDate = date('d M Y', strtotime($row->to_datetime));
-                ?>
-                <div class="col-md-6 col-lg-4">
-                    <div class="vehicle-card">
-                        <div class="position-relative">
-                            <img src="<?= $imagePath ?>" class="vehicle-img w-100"
-                                 alt="Vehicle Image" data-full="<?= $imagePath ?>">
-                            <span class="position-absolute top-0 end-0 m-3 badge bg-light text-dark shadow-sm">
-                                #<?= $row->booking_id ?>
-                            </span>
-                        </div>
-                        
-                        <div class="card-body">
-                            <h5 class="card-title d-flex justify-content-between align-items-center">
-                                <?= "$row->v_name" ?>
-                                <small class="text-muted fw-normal fs-6"><?= $row->v_regno ?></small>
-                            </h5>
+            $stmt = $mysqli->prepare($query);
+            $stmt->bind_param('i', $aid);
+            $stmt->execute();
+            $res = $stmt->get_result();
+
+            if ($res->num_rows > 0) {
+                while ($row = $res->fetch_object()) {
+                    $imagePath = $projectFolder . 'vendor/img/' . ($row->v_dpic ?: 'placeholder.png');
+                    
+                    // Format Dates
+                    $createdDate = date('d M Y, h:i A', strtotime($row->created_at));
+                    $fromDate = date('d M Y, h:i A', strtotime($row->from_datetime));
+                    $toDate = date('d M Y', strtotime($row->to_datetime));
+                    ?>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="vehicle-card">
+                            <div class="position-relative">
+                                <img src="<?= $imagePath ?>" class="vehicle-img w-100"
+                                     alt="Vehicle Image" data-full="<?= $imagePath ?>">
+                                <span class="position-absolute top-0 end-0 m-3 badge bg-light text-dark shadow-sm">
+                                    #<?= $row->booking_id ?>
+                                </span>
+                            </div>
                             
-                            <div class="booking-detail">
-                                <i class="far fa-calendar-plus"></i>
+                            <div class="card-body">
+                                <h5 class="card-title d-flex justify-content-between align-items-center">
+                                    <?= "$row->v_name" ?>
+                                    <small class="text-muted fw-normal fs-6"><?= $row->v_regno ?></small>
+                                </h5>
+                                
+                                <div class="booking-detail">
+                                    <i class="far fa-calendar-plus"></i>
+                                    <div>
+                                        <small class="text-muted d-block">Booked On</small>
+                                        <span class="fw-semibold"><?= $createdDate ?></span>
+                                    </div>
+                                </div>
+                                
+                                <div class="row mt-2">
+                                    <div class="col-6">
+                                        <div class="booking-detail">
+                                            <i class="fas fa-plane-departure text-success"></i>
+                                            <div>
+                                                <small class="text-muted d-block">From</small>
+                                                <span class="fw-semibold small"><?= $fromDate ?></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="booking-detail">
+                                            <i class="fas fa-plane-arrival text-danger"></i>
+                                            <div>
+                                                <small class="text-muted d-block">To</small>
+                                                <span class="fw-semibold small"><?= $toDate ?></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-3 pt-3 border-top">
+                                    <small class="text-muted d-block mb-1">Purpose</small>
+                                    <?php
+                                        $fullRemarks = htmlspecialchars($row->purpose);
+                                        $shortRemarks = strlen($fullRemarks) > 50 ? substr($fullRemarks, 0, 50) . '...' : $fullRemarks;
+                                    ?>
+                                    <p class="mb-0 small text-secondary fst-italic">
+                                        <span class="remarks-text" data-full="<?= $fullRemarks ?>">
+                                            <?= $shortRemarks ?>
+                                            <?php if (strlen($fullRemarks) > 50): ?>
+                                                <a href="#" class="text-primary toggle-remarks text-decoration-none fw-bold ms-1">Read more</a>
+                                            <?php endif; ?>
+                                        </span>
+                                    </p>
+                                </div>
+
+                            </div>
+                            <div class="card-footer d-flex justify-content-between align-items-center">
                                 <div>
-                                    <small class="text-muted d-block">Booked On</small>
-                                    <span class="fw-semibold"><?= $createdDate ?></span>
+                                    <?php if ($row->status == "PENDING"): ?>
+                                        <span class="badge bg-warning"><i class="fas fa-clock me-1"></i> Pending</span>
+                                    <?php elseif ($row->status == "APPROVED"): ?>
+                                        <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> Approved</span>
+                                    <?php elseif ($row->status == "REJECTED"): ?>
+                                        <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i> Rejected</span>
+                                    <?php elseif ($row->status == "CANCELLED"): ?>
+                                        <span class="badge bg-secondary"><i class="fas fa-ban me-1"></i> Cancelled</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-info"><?= $row->status ?></span>
+                                    <?php endif; ?>
                                 </div>
-                            </div>
-                            
-                            <div class="row mt-2">
-                                <div class="col-6">
-                                    <div class="booking-detail">
-                                        <i class="fas fa-plane-departure text-success"></i>
-                                        <div>
-                                            <small class="text-muted d-block">From</small>
-                                            <span class="fw-semibold small"><?= $fromDate ?></span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="booking-detail">
-                                        <i class="fas fa-plane-arrival text-danger"></i>
-                                        <div>
-                                            <small class="text-muted d-block">To</small>
-                                            <span class="fw-semibold small"><?= $toDate ?></span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
 
-                            <div class="mt-3 pt-3 border-top">
-                                <small class="text-muted d-block mb-1">Purpose</small>
-                                <?php
-                                    $fullRemarks = htmlspecialchars($row->purpose);
-                                    $shortRemarks = strlen($fullRemarks) > 50 ? substr($fullRemarks, 0, 50) . '...' : $fullRemarks;
-                                ?>
-                                <p class="mb-0 small text-secondary fst-italic">
-                                    <span class="remarks-text" data-full="<?= $fullRemarks ?>">
-                                        <?= $shortRemarks ?>
-                                        <?php if (strlen($fullRemarks) > 50): ?>
-                                            <a href="#" class="text-primary toggle-remarks text-decoration-none fw-bold ms-1">Read more</a>
-                                        <?php endif; ?>
-                                    </span>
-                                </p>
-                            </div>
-
-                        </div>
-                        <div class="card-footer d-flex justify-content-between align-items-center">
-                            <div>
-                                <?php if ($row->status == "PENDING"): ?>
-                                    <span class="badge bg-warning"><i class="fas fa-clock me-1"></i> Pending</span>
-                                <?php elseif ($row->status == "APPROVED"): ?>
-                                    <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> Approved</span>
-                                <?php elseif ($row->status == "REJECTED"): ?>
-                                    <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i> Rejected</span>
-                                <?php elseif ($row->status == "CANCELLED"): ?>
-                                    <span class="badge bg-secondary"><i class="fas fa-ban me-1"></i> Cancelled</span>
-                                <?php else: ?>
-                                    <span class="badge bg-info"><?= $row->status ?></span>
+                                <?php if ($row->status == 'PENDING'): ?>
+                                    <button class="btn btn-outline-danger btn-cancel cancel-booking-btn" data-booking-id="<?= $row->booking_id ?>">
+                                        Cancel
+                                    </button>
                                 <?php endif; ?>
                             </div>
 
-                            <?php if ($row->status == 'PENDING'): ?>
-                                <button class="btn btn-outline-danger btn-cancel cancel-booking-btn" data-booking-id="<?= $row->booking_id ?>">
-                                    Cancel
-                                </button>
-                            <?php endif; ?>
                         </div>
-
+                    </div>
+                <?php }
+            } else { ?>
+                <div class="col-12">
+                    <div class="alert alert-light text-center shadow-sm p-5 rounded-4 border-0">
+                        <div class="mb-3">
+                            <i class="fas fa-clipboard-list fa-4x text-muted opacity-25"></i>
+                        </div>
+                        <h5 class="fw-bold text-secondary">No Bookings Found</h5>
+                        <p class="text-muted mb-4">You haven't made any vehicle booking requests yet.</p>
+                        <a href="usr-book-vehicle.php" class="btn btn-success rounded-pill px-4 shadow-sm">
+                            <i class="fas fa-plus me-2"></i> Book a Vehicle
+                        </a>
                     </div>
                 </div>
-            <?php }
-        } else { ?>
-            <div class="col-12">
-                <div class="alert alert-light text-center shadow-sm p-5 rounded-4 border-0">
-                    <div class="mb-3">
-                        <i class="fas fa-clipboard-list fa-4x text-muted opacity-25"></i>
-                    </div>
-                    <h5 class="fw-bold text-secondary">No Bookings Found</h5>
-                    <p class="text-muted mb-4">You haven't made any vehicle booking requests yet.</p>
-                    <button onclick="$('#loadBookingFormBtn').click()" class="btn btn-success rounded-pill px-4 shadow-sm">
-                        <i class="fas fa-plus me-2"></i> Book a Vehicle
-                    </button>
-                </div>
-            </div>
-        <?php } ?>
+            <?php } ?>
+        </div>
     </div>
 
     <!-- Image Zoom Modal -->
@@ -358,12 +383,7 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
                     $('#cancelModal').modal('hide');
                     swal("Booking Cancelled", "Your booking has been successfully cancelled.", "success")
                         .then(() => {
-                            // Reload content via dashboard logic if possible, or reload page
-                            if(typeof loadContent === 'function') {
-                                loadContent('user-view-booking.php', '#loadBookingsBtn');
-                            } else {
-                                location.reload();
-                            }
+                            location.reload();
                         });
                 },
                 error: function () {

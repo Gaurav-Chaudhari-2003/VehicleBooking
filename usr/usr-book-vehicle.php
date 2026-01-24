@@ -12,33 +12,60 @@ $aid = $_SESSION['u_id'] ?? null;
 
 $user = null;
 if ($aid) {
-    // Updated query to match new schema: users table
     $stmt = $mysqli->prepare("SELECT first_name, last_name, email, phone FROM users WHERE id = ?");
     $stmt->bind_param('i', $aid);
     $stmt->execute();
     $user = $stmt->get_result()->fetch_object();
     $stmt->close();
 }
+
+// Handle Date Filtering
+$filter_from = $_GET['filter_from'] ?? '';
+$filter_to = $_GET['filter_to'] ?? '';
+
+$available_vehicles = [];
+$show_book_button = false;
+
+$query = "SELECT * FROM vehicles WHERE status = 'AVAILABLE'";
+
+if ($filter_from && $filter_to) {
+    $show_book_button = true;
+    $booked_sql = "
+        SELECT DISTINCT vehicle_id 
+        FROM bookings 
+        WHERE status = 'APPROVED' 
+        AND (
+            (? <= to_datetime) AND (? >= from_datetime)
+        )
+    ";
+    $query .= " AND id NOT IN ($booked_sql)";
+}
+
+$stmt = $mysqli->prepare($query);
+
+if ($filter_from && $filter_to) {
+    $stmt->bind_param('ss', $filter_from, $filter_to);
+}
+
+$stmt->execute();
+$res = $stmt->get_result();
+while ($row = $res->fetch_object()) {
+    $available_vehicles[] = $row;
+}
+$stmt->close();
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Available Vehicles | Vehicle Booking System</title>
+    <title>Book Vehicle | Vehicle Booking System</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <!-- Include Global Theme -->
-    <!-- Note: We are inside 'usr' folder, so path is '../vendor/inc/theme-config.php' -->
-    <!-- However, this file is loaded via AJAX into user-dashboard.php which is also in 'usr'. -->
-    <!-- If loaded directly, the path is correct. If loaded via AJAX, the relative paths in theme-config might need care, 
-         but since theme-config uses CDN links, it's fine. -->
-    
-    <!-- We don't include theme-config here because this page is primarily loaded INSIDE user-dashboard.php 
-         which already has the theme. Including it again might cause conflicts or double loading.
-         BUT, if accessed directly, it needs styles. 
-         Let's add a check or just include necessary specific styles for this component. -->
+    <?php include("../vendor/inc/theme-config.php"); ?>
 
-    <!-- CSS & Icons (Keep these as they are specific or CDN) -->
+    <!-- CSS & Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -50,319 +77,270 @@ if ($aid) {
 
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Leaflet Control Geocoder CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
-    <!-- Leaflet Routing Machine CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
 
     <style>
-        /* Scoped styles for the booking component */
-        .vehicle-img {
-            height: 200px;
-            object-fit: cover;
-            border-radius: 10px 10px 0 0;
-        }
-
-        .vehicle-card {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border: none;
-            border-radius: 15px;
-            overflow: hidden;
-            background: #fff;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-            height: 100%;
-        }
-
-        .vehicle-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        }
+        body { background-color: #f4f7f6; }
+        .dashboard-container { display: flex; min-height: 100vh; }
         
-        .card-body {
-            padding: 20px;
-        }
+        /* Sidebar is loaded via include, styles are in sidebar.php */
         
-        .card-title {
-            font-weight: 700;
-            color: #333;
-            margin-bottom: 10px;
-        }
-        
-        .card-text {
-            color: #666;
-            font-size: 0.95rem;
-            margin-bottom: 20px;
-        }
-
-        .modal-content {
-            border-radius: 20px;
-            border: none;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
-        }
-        
-        .modal-header {
-            border-bottom: 1px solid #eee;
-            padding: 20px 30px;
-            background-color: #fff;
-            border-radius: 20px 20px 0 0;
-        }
-        
-        .modal-title {
-            font-weight: 700;
-            color: #333;
-        }
-        
-        .modal-body {
+        .main-content {
+            flex: 1;
             padding: 30px;
-        }
-        
-        .modal-footer {
-            border-top: 1px solid #eee;
-            padding: 20px 30px;
+            margin-left: 260px; /* Match sidebar width */
         }
 
-        .btn-block {
-            width: 100%;
-            border-radius: 50px;
-            padding: 10px;
-            font-weight: 600;
-        }
+        .vehicle-img { height: 200px; object-fit: cover; border-radius: 10px 10px 0 0; }
+        .vehicle-card { transition: transform 0.3s ease, box-shadow 0.3s ease; border: none; border-radius: 15px; overflow: hidden; background: #fff; box-shadow: 0 5px 15px rgba(0,0,0,0.05); height: 100%; }
+        .vehicle-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .card-body { padding: 20px; }
+        .card-title { font-weight: 700; color: #333; margin-bottom: 10px; }
+        .card-text { color: #666; font-size: 0.95rem; margin-bottom: 20px; }
+        .modal-content { border-radius: 20px; border: none; box-shadow: 0 15px 40px rgba(0,0,0,0.2); }
+        .modal-header { border-bottom: 1px solid #eee; padding: 20px 30px; background-color: #fff; border-radius: 20px 20px 0 0; }
+        .modal-title { font-weight: 700; color: #333; }
+        .modal-body { padding: 30px; }
+        .modal-footer { border-top: 1px solid #eee; padding: 20px 30px; }
+        .btn-block { width: 100%; border-radius: 50px; padding: 10px; font-weight: 600; }
+        .form-control { border-radius: 10px; padding: 10px 15px; border: 1px solid #ddd; }
+        .form-control:focus { box-shadow: 0 0 0 3px rgba(0, 121, 107, 0.1); border-color: #00796b; }
+        .input-group-text { border-radius: 10px 0 0 10px; border: 1px solid #ddd; border-right: none; }
+        .input-group .form-control { border-radius: 0 10px 10px 0; }
+        .flatpickr-day.pending { background-color: #ffc107 !important; color: black !important; border-color: #ffc107 !important; }
+        .flatpickr-day.booked { background-color: #ff4d4d !important; color: white !important; border-color: #ff4d4d !important; }
+        .flatpickr-day.overlap-restricted { background-color: #e0e0e0 !important; color: #aaaaaa !important; border-color: #e0e0e0 !important; cursor: not-allowed; }
+        .map-container { height: 300px; width: 100%; border-radius: 15px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .leaflet-routing-container { display: none !important; }
+        .filter-section { background: #fff; padding: 20px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 30px; }
         
-        .form-control {
-            border-radius: 10px;
-            padding: 10px 15px;
-            border: 1px solid #ddd;
-        }
-        
-        .form-control:focus {
-            box-shadow: 0 0 0 3px rgba(0, 121, 107, 0.1); /* Using theme secondary color */
-            border-color: #00796b;
-        }
-        
-        .input-group-text {
-            border-radius: 10px 0 0 10px;
-            border: 1px solid #ddd;
-            border-right: none;
-        }
-        
-        .input-group .form-control {
-            border-radius: 0 10px 10px 0;
-        }
-
-
-        /* Custom styles for Flatpickr */
-        .flatpickr-day.pending {
-            background-color: #ffc107 !important;
-            color: black !important;
-            border-color: #ffc107 !important;
-        }
-        .flatpickr-day.booked {
-            background-color: #ff4d4d !important;
-            color: white !important;
-            border-color: #ff4d4d !important;
-        }
-        .flatpickr-day.overlap-restricted {
-            background-color: #e0e0e0 !important;
-            color: #aaaaaa !important;
-            border-color: #e0e0e0 !important;
-            cursor: not-allowed;
-        }
-        
-        /* Map Styles */
-        .map-container {
-            height: 300px;
-            width: 100%;
-            border-radius: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        }
-        
-        /* Hide default routing container if we want custom display */
-        .leaflet-routing-container {
-            display: none !important;
-        }
-        
-        /* Filter Section */
-        .filter-section {
-            background: #fff;
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-            margin-bottom: 30px;
-        }
+        .content-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
     </style>
 </head>
 <body>
-<div class="container-fluid">
-    <?php if (isset($_SESSION['msg'])): ?>
-        <script>
-            setTimeout(() => swal("Warning", "<?php echo $_SESSION['msg']; ?>", "error"), 100);
-        </script>
-        <?php unset($_SESSION['msg']); ?>
-    <?php endif; ?>
 
-    <!-- Filter & Search Header -->
-    <div class="filter-section d-flex justify-content-between align-items-center flex-wrap gap-3">
-        <h4 class="mb-0 fw-bold text-dark"><i class="fas fa-bus me-2 text-success"></i> Available Vehicles</h4>
-        
-        <div class="d-flex gap-3">
-            <select id="seatFilter" class="form-select form-select-sm" style="width: 150px; border-radius: 20px;">
-                <option value="">Filter by Seats</option>
-                <?php
-                $seatStmt = $mysqli->prepare("SELECT DISTINCT capacity FROM vehicles WHERE status = 'AVAILABLE' ORDER BY capacity");
-                $seatStmt->execute();
-                $seatResult = $seatStmt->get_result();
-                while ($seatRow = $seatResult->fetch_object()) {
-                    echo "<option value='$seatRow->capacity'>$seatRow->capacity Seats</option>";
-                }
-                $seatStmt->close();
-                ?>
-            </select>
-            
-            <div class="input-group input-group-sm" style="width: 250px;">
-                <span class="input-group-text bg-light border-end-0" style="border-radius: 20px 0 0 20px;"><i class="fas fa-search text-muted"></i></span>
-                <input type="text" id="searchInput" class="form-control border-start-0" placeholder="Search vehicles..." style="border-radius: 0 20px 20px 0;">
+<div class="dashboard-container">
+    <!-- Sidebar -->
+    <?php include("vendor/inc/sidebar.php"); ?>
+
+    <div class="main-content">
+        <div class="content-header">
+            <h2 class="fw-bold text-dark mb-0">Book a Vehicle</h2>
+            <div class="d-flex align-items-center">
+                <div class="text-end me-3">
+                    <h6 class="mb-0 text-dark fw-semibold"><?php echo htmlspecialchars($user->first_name ?? 'User'); ?></h6>
+                    <small class="text-muted">Employee</small>
+                </div>
+                <i class="fas fa-user-circle fa-2x text-primary"></i>
             </div>
         </div>
-    </div>
 
-    <div class="row g-4" id="vehicleCards">
-        <?php
-        $stmt = $mysqli->prepare("SELECT * FROM vehicles WHERE status = 'AVAILABLE'");
-        $stmt->execute();
-        $res = $stmt->get_result();
-        while ($row = $res->fetch_object()) {
-            $imagePath = $projectFolder . 'vendor/img/' . ($row->image ?: 'placeholder.png');
-            ?>
-            <!-- Modal -->
-            <div class="modal fade" id="bookModal<?php echo $row->id; ?>" tabindex="-1"
-                 aria-labelledby="bookModalLabel<?php echo $row->id; ?>" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered modal-lg">
-                    <div class="modal-content">
-                        <form method="POST" action="user-confirm-booking.php" onsubmit="return validateBookingDates(this);">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="bookModalLabel<?php echo $row->id; ?>">
-                                    Book <?php echo $row->name; ?>
-                                </h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                        aria-label="Close"></button>
-                            </div>
+        <?php if (isset($_SESSION['msg'])): ?>
+            <script>
+                setTimeout(() => swal("Warning", "<?php echo $_SESSION['msg']; ?>", "error"), 100);
+            </script>
+            <?php unset($_SESSION['msg']); ?>
+        <?php endif; ?>
 
-                            <div class="modal-body">
-                                <div class="mb-4 d-flex align-items-center gap-3 p-3 bg-light rounded-3">
-                                    <img src="<?= $imagePath; ?>" class="rounded" style="width: 80px; height: 60px; object-fit: cover;">
-                                    <div>
-                                        <h6 class="mb-1 fw-bold"><?= $row->name; ?></h6>
-                                        <small class="text-muted"><?= $row->category; ?> | <?= $row->reg_no; ?></small>
+        <!-- Date Filter Section -->
+        <div class="filter-section mb-4">
+            <h5 class="fw-bold mb-3"><i class="fas fa-calendar-alt text-primary me-2"></i> Select Journey Dates</h5>
+            <form method="GET" action="usr-book-vehicle.php" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label small text-muted fw-bold text-uppercase">Journey Start</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="far fa-calendar-alt text-primary"></i></span>
+                        <input type="text" name="filter_from" id="filter_from" class="form-control bg-white" placeholder="Select Start Date & Time" value="<?= htmlspecialchars($filter_from) ?>" required readonly>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small text-muted fw-bold text-uppercase">Return Date</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="far fa-calendar-alt text-primary"></i></span>
+                        <input type="text" name="filter_to" id="filter_to" class="form-control bg-white" placeholder="Select Return Date & Time" value="<?= htmlspecialchars($filter_to) ?>" required readonly>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill"><i class="fas fa-filter me-2"></i> Find Available Vehicles</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Filter & Search Header -->
+        <div class="filter-section d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <h4 class="mb-0 fw-bold text-dark"><i class="fas fa-bus me-2 text-success"></i> Available Vehicles</h4>
+            
+            <div class="d-flex gap-3">
+                <select id="seatFilter" class="form-select form-select-sm" style="width: 150px; border-radius: 20px;">
+                    <option value="">Filter by Seats</option>
+                    <?php
+                    $seatStmt = $mysqli->prepare("SELECT DISTINCT capacity FROM vehicles WHERE status = 'AVAILABLE' ORDER BY capacity");
+                    $seatStmt->execute();
+                    $seatResult = $seatStmt->get_result();
+                    while ($seatRow = $seatResult->fetch_object()) {
+                        echo "<option value='$seatRow->capacity'>$seatRow->capacity Seats</option>";
+                    }
+                    $seatStmt->close();
+                    ?>
+                </select>
+                
+                <div class="input-group input-group-sm" style="width: 250px;">
+                    <span class="input-group-text bg-light border-end-0" style="border-radius: 20px 0 0 20px;"><i class="fas fa-search text-muted"></i></span>
+                    <input type="text" id="searchInput" class="form-control border-start-0" placeholder="Search vehicles..." style="border-radius: 0 20px 20px 0;">
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4" id="vehicleCards">
+            <?php if (empty($available_vehicles)): ?>
+                <div class="col-12 text-center py-5">
+                    <div class="text-muted">
+                        <i class="fas fa-car-crash fa-3x mb-3"></i>
+                        <h5>No vehicles available for the selected dates.</h5>
+                        <p>Please try different dates or clear the filter.</p>
+                    </div>
+                </div>
+            <?php else: ?>
+                <?php foreach ($available_vehicles as $row): 
+                    $imagePath = $projectFolder . 'vendor/img/' . ($row->image ?: 'placeholder.png');
+                ?>
+                    <!-- Modal -->
+                    <div class="modal fade" id="bookModal<?php echo $row->id; ?>" tabindex="-1"
+                         aria-labelledby="bookModalLabel<?php echo $row->id; ?>" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered modal-lg">
+                            <div class="modal-content">
+                                <form method="POST" action="user-confirm-booking.php" onsubmit="return validateBookingDates(this);">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="bookModalLabel<?php echo $row->id; ?>">
+                                            Book <?php echo $row->name; ?>
+                                        </h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                aria-label="Close"></button>
                                     </div>
-                                </div>
 
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label for="book_from_date<?= $row->id; ?>" class="form-label fw-semibold small text-uppercase text-muted">From Date</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-white"><i class="far fa-calendar-alt text-primary"></i></span>
-                                            <input type="text" onkeydown="return false;" id="book_from_date<?= $row->id; ?>" name="book_from_date" class="form-control book-from-date" required placeholder="Select Date & Time">
+                                    <div class="modal-body">
+                                        <div class="mb-4 d-flex align-items-center gap-3 p-3 bg-light rounded-3">
+                                            <img src="<?= $imagePath; ?>" class="rounded" style="width: 80px; height: 60px; object-fit: cover;">
+                                            <div>
+                                                <h6 class="mb-1 fw-bold"><?= $row->name; ?></h6>
+                                                <small class="text-muted"><?= $row->category; ?> | <?= $row->reg_no; ?></small>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label for="book_to_date<?= $row->id; ?>" class="form-label fw-semibold small text-uppercase text-muted">To Date</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-white"><i class="far fa-calendar-alt text-primary"></i></span>
-                                            <input type="text" onkeydown="return false;" id="book_to_date<?= $row->id; ?>" name="book_to_date" class="form-control book-to-date" required placeholder="Select Date">
-                                        </div>
-                                    </div>
-                                </div>
 
-                                <!-- New Fields for Pickup and Drop Location -->
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label for="pickup_location<?= $row->id; ?>" class="form-label fw-semibold small text-uppercase text-muted">Pickup Location</label>
-                                        <div class="input-group" onclick="openMap(<?= $row->id; ?>, 'pickup')" style="cursor: pointer;">
-                                            <span class="input-group-text bg-success text-white border-success"><i class="fas fa-map-marker-alt"></i></span>
-                                            <input type="text" id="pickup_location<?= $row->id; ?>" name="pickup_location" class="form-control pickup-input" required placeholder="Click to select on map" readonly style="background-color: #fff; cursor: pointer;">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="book_from_date<?= $row->id; ?>" class="form-label fw-semibold small text-uppercase text-muted">From Date</label>
+                                                <div class="input-group">
+                                                    <span class="input-group-text bg-white"><i class="far fa-calendar-alt text-primary"></i></span>
+                                                    <input type="text" onkeydown="return false;" id="book_from_date<?= $row->id; ?>" name="book_from_date" class="form-control book-from-date" required placeholder="Select Date & Time" value="<?= htmlspecialchars($filter_from) ?>">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="book_to_date<?= $row->id; ?>" class="form-label fw-semibold small text-uppercase text-muted">To Date</label>
+                                                <div class="input-group">
+                                                    <span class="input-group-text bg-white"><i class="far fa-calendar-alt text-primary"></i></span>
+                                                    <input type="text" onkeydown="return false;" id="book_to_date<?= $row->id; ?>" name="book_to_date" class="form-control book-to-date" required placeholder="Select Date" value="<?= htmlspecialchars($filter_to) ?>">
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label for="drop_location<?= $row->id; ?>" class="form-label fw-semibold small text-uppercase text-muted">Drop Location</label>
-                                        <div class="input-group" onclick="openMap(<?= $row->id; ?>, 'drop')" style="cursor: pointer;">
-                                            <span class="input-group-text bg-danger text-white border-danger"><i class="fas fa-map-marker-alt"></i></span>
-                                            <input type="text" id="drop_location<?= $row->id; ?>" name="drop_location" class="form-control drop-input" required placeholder="Click to select on map" readonly style="background-color: #fff; cursor: pointer;">
+
+                                        <!-- New Fields for Pickup and Drop Location -->
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label for="pickup_location<?= $row->id; ?>" class="form-label fw-semibold small text-uppercase text-muted">Pickup Location</label>
+                                                <div class="input-group" onclick="openMap(<?= $row->id; ?>, 'pickup')" style="cursor: pointer;">
+                                                    <span class="input-group-text bg-success text-white border-success"><i class="fas fa-map-marker-alt"></i></span>
+                                                    <input type="text" id="pickup_location<?= $row->id; ?>" name="pickup_location" class="form-control pickup-input" required placeholder="Click to select on map" readonly style="background-color: #fff; cursor: pointer;">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label for="drop_location<?= $row->id; ?>" class="form-label fw-semibold small text-uppercase text-muted">Drop Location</label>
+                                                <div class="input-group" onclick="openMap(<?= $row->id; ?>, 'drop')" style="cursor: pointer;">
+                                                    <span class="input-group-text bg-danger text-white border-danger"><i class="fas fa-map-marker-alt"></i></span>
+                                                    <input type="text" id="drop_location<?= $row->id; ?>" name="drop_location" class="form-control drop-input" required placeholder="Click to select on map" readonly style="background-color: #fff; cursor: pointer;">
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                </div>
 
-                                <!-- Map Container (Initially Hidden) -->
-                                <div id="map-container-<?= $row->id; ?>" style="display:none; position: relative;" class="mb-3">
-                                    <div id="map<?= $row->id; ?>" class="map-container"></div>
-                                    
-                                    <!-- Route Info -->
-                                    <div id="route-info-<?= $row->id; ?>" class="alert alert-info text-center py-2 mb-2 shadow-sm border-0" style="display:none; border-radius: 10px;">
-                                        <i class="fas fa-route text-primary"></i> 
-                                        <strong class="ms-2">Distance:</strong> <span class="route-dist">0 km</span> 
-                                        <span class="mx-2 text-muted">|</span> 
-                                        <i class="fas fa-clock text-primary"></i> <strong class="ms-1">Est. Time:</strong> <span class="route-time">0 min</span>
+                                        <!-- Map Container (Initially Hidden) -->
+                                        <div id="map-container-<?= $row->id; ?>" style="display:none; position: relative;" class="mb-3">
+                                            <div id="map<?= $row->id; ?>" class="map-container"></div>
+                                            
+                                            <!-- Route Info -->
+                                            <div id="route-info-<?= $row->id; ?>" class="alert alert-info text-center py-2 mb-2 shadow-sm border-0" style="display:none; border-radius: 10px;">
+                                                <i class="fas fa-route text-primary"></i> 
+                                                <strong class="ms-2">Distance:</strong> <span class="route-dist">0 km</span> 
+                                                <span class="mx-2 text-muted">|</span> 
+                                                <i class="fas fa-clock text-primary"></i> <strong class="ms-1">Est. Time:</strong> <span class="route-time">0 min</span>
+                                            </div>
+
+                                            <div class="text-center">
+                                                <button type="button" class="btn btn-sm btn-secondary rounded-pill px-4" onclick="hideMap(<?= $row->id; ?>)">
+                                                    <i class="fas fa-check me-1"></i> Done / Close Map
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="purpose<?= $row->id; ?>" class="form-label fw-semibold small text-uppercase text-muted">Purpose</label>
+                                            <textarea id="purpose<?= $row->id; ?>" name="purpose" class="form-control" rows="2" placeholder="Briefly describe the purpose of booking (optional)"></textarea>
+                                        </div>
+
+                                        <!-- Hidden Inputs -->
+                                        <input type="hidden" name="v_id" value="<?= $row->id; ?>">
+                                        <input type="hidden" name="u_car_type" value="<?= $row->category; ?>">
+                                        <input type="hidden" name="u_car_regno" value="<?= $row->reg_no; ?>">
+                                        <input type="hidden" name="u_car_book_status" value="Pending">
                                     </div>
 
-                                    <div class="text-center">
-                                        <button type="button" class="btn btn-sm btn-secondary rounded-pill px-4" onclick="hideMap(<?= $row->id; ?>)">
-                                            <i class="fas fa-check me-1"></i> Done / Close Map
+                                    <div class="modal-footer bg-light">
+                                        <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">
+                                            Cancel
+                                        </button>
+                                        <button type="submit" name="book_vehicle" class="btn btn-success rounded-pill px-4 shadow-sm">
+                                            Confirm Booking
                                         </button>
                                     </div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="purpose<?= $row->id; ?>" class="form-label fw-semibold small text-uppercase text-muted">Purpose</label>
-                                    <textarea id="purpose<?= $row->id; ?>" name="purpose" class="form-control" rows="2" placeholder="Briefly describe the purpose of booking (optional)"></textarea>
-                                </div>
-
-                                <!-- Hidden Inputs -->
-                                <input type="hidden" name="v_id" value="<?= $row->id; ?>">
-                                <input type="hidden" name="u_car_type" value="<?= $row->category; ?>">
-                                <input type="hidden" name="u_car_regno" value="<?= $row->reg_no; ?>">
-                                <input type="hidden" name="u_car_book_status" value="Pending">
+                                </form>
                             </div>
-
-                            <div class="modal-footer bg-light">
-                                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">
-                                    Cancel
-                                </button>
-                                <button type="submit" name="book_vehicle" class="btn btn-success rounded-pill px-4 shadow-sm">
-                                    Confirm Booking
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-
-            <!-- Card -->
-            <div class="col-md-6 col-lg-4 vehicle-card-wrapper">
-                <div class="vehicle-card h-100">
-                    <div class="position-relative">
-                        <img src="<?= $imagePath; ?>" class="card-img-top vehicle-img" alt="<?= $row->name; ?>">
-                        <span class="position-absolute top-0 end-0 m-3 badge bg-white text-dark shadow-sm rounded-pill px-3 py-2">
-                            <i class="fas fa-chair text-success me-1"></i> <?= $row->capacity; ?> Seats
-                        </span>
-                    </div>
-                    <div class="card-body d-flex flex-column">
-                        <h5 class="card-title"><?= $row->name; ?></h5>
-                        <p class="card-text mb-4">
-                            <small class="text-muted d-block mb-1">Registration No.</small>
-                            <span class="fw-bold text-dark"><?= $row->reg_no; ?></span>
-                        </p>
-                        <div class="mt-auto">
-                            <button type="button" class="btn btn-outline-success btn-block" data-bs-toggle="modal"
-                                    data-bs-target="#bookModal<?= $row->id; ?>">
-                                <i class="fas fa-calendar-check me-2"></i> Book Now
-                            </button>
                         </div>
                     </div>
-                </div>
-            </div>
-        <?php }
-        $stmt->close(); ?>
+
+
+                    <!-- Card -->
+                    <div class="col-md-6 col-lg-4 vehicle-card-wrapper">
+                        <div class="vehicle-card h-100">
+                            <div class="position-relative">
+                                <img src="<?= $imagePath; ?>" class="card-img-top vehicle-img" alt="<?= $row->name; ?>">
+                                <span class="position-absolute top-0 end-0 m-3 badge bg-white text-dark shadow-sm rounded-pill px-3 py-2">
+                                    <i class="fas fa-chair text-success me-1"></i> <?= $row->capacity; ?> Seats
+                                </span>
+                            </div>
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title"><?= $row->name; ?></h5>
+                                <p class="card-text mb-4">
+                                    <small class="text-muted d-block mb-1">Registration No.</small>
+                                    <span class="fw-bold text-dark"><?= $row->reg_no; ?></span>
+                                </p>
+                                <div class="mt-auto">
+                                    <?php if ($show_book_button): ?>
+                                        <button type="button" class="btn btn-outline-success btn-block" data-bs-toggle="modal"
+                                                data-bs-target="#bookModal<?= $row->id; ?>">
+                                            <i class="fas fa-calendar-check me-2"></i> Book Now
+                                        </button>
+                                    <?php else: ?>
+                                        <div class="text-center text-muted small bg-light rounded-pill py-2">
+                                            <i class="fas fa-info-circle me-1"></i> Select dates to book
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
     </div>
 </div>
 
@@ -393,6 +371,26 @@ if ($aid) {
 <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 
 <script>
+    // Initialize Global Date Filter Pickers
+    flatpickr("#filter_from", {
+        enableTime: true,
+        dateFormat: "Y-m-d H:i",
+        minDate: "today",
+        onChange: function(selectedDates, dateStr, instance) {
+            // Optional: Set minDate for filter_to
+            const toPicker = document.querySelector("#filter_to")._flatpickr;
+            if (toPicker) {
+                toPicker.set('minDate', dateStr);
+            }
+        }
+    });
+
+    flatpickr("#filter_to", {
+        enableTime: true,
+        dateFormat: "Y-m-d H:i",
+        minDate: "today"
+    });
+
     async function fetchBookedDates(vehicleId) {
         const res = await fetch(`get-approved-dates.php?v_id=${vehicleId}`);
         return res.json();
@@ -462,8 +460,10 @@ if ($aid) {
 
         if (!fromInput || !toInput || !vehicleId) return;
 
-        // Initially disable 'To Date' input
-        toInput.disabled = true;
+        // If dates are pre-filled from filter, don't disable To Date initially
+        if (!toInput.value) {
+            toInput.disabled = true;
+        }
 
         Promise.all([fetchBookedDates(vehicleId), fetchPendingDates(vehicleId)]).then(([approvedRanges, pendingRanges]) => {
             // Sort approvedRanges by date
@@ -531,6 +531,19 @@ if ($aid) {
                     }
                 }
             });
+
+            // If pre-filled, initialize To Date picker immediately
+            if (fromInput.value) {
+                 // Trigger logic to setup To Date constraints based on pre-filled From Date
+                 // We can manually call the onChange logic or just init a basic picker if needed.
+                 // For simplicity, let's just init a basic picker for To Date if value exists
+                 if (toInput.value) {
+                     const toOptions = buildFlatpickrOptions(approvedRanges, pendingRanges, minDateStr);
+                     toOptions.enableTime = true;
+                     toOptions.dateFormat = "Y-m-d H:i";
+                     flatpickr(toInput, toOptions);
+                 }
+            }
         });
     }
 
@@ -833,7 +846,7 @@ if ($aid) {
                 // Let's fix the selector logic.
                 
                 // We need to find the seats from the badge text or add data attribute back.
-                const seatsText = $(this).find('.badge').text(); 
+                const seatsText = $(this).find('.badge').text();
                 // " 5 Seats" -> "5"
                 const seats = seatsText.replace(/[^0-9]/g, '');
 

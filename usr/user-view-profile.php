@@ -38,10 +38,21 @@ $stats = $statsStmt->get_result()->fetch_object();
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <!-- Include Global Theme -->
+    <?php include("../vendor/inc/theme-config.php"); ?>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
+        body { background-color: #f4f7f6; }
+        .dashboard-container { display: flex; min-height: 100vh; }
+        
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            margin-left: 260px; /* Match sidebar width */
+        }
+
         /* Scoped styles for profile component */
         .profile-header-card {
             background: linear-gradient(135deg, #004d40 0%, #00796b 100%);
@@ -155,108 +166,125 @@ $stats = $statsStmt->get_result()->fetch_object();
             border-top: none;
             padding: 10px 25px 25px;
         }
+        
+        .content-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
     </style>
 </head>
 <body>
 
-<div class="container-fluid">
-    
-    <!-- Profile Header -->
-    <div class="profile-header-card">
-        <div class="profile-avatar">
-            <i class="fas fa-user"></i>
-        </div>
-        <h3 class="fw-bold mb-1"><?php echo htmlspecialchars($user->first_name . ' ' . $user->last_name); ?></h3>
-        <p class="mb-2 opacity-75">Employee</p>
-        <span class="badge bg-white text-dark rounded-pill px-3 py-2">
-            <i class="fas fa-calendar-alt me-1 text-success"></i> Joined: <?php echo $joinDate; ?>
-        </span>
-    </div>
+<div class="dashboard-container">
+    <!-- Sidebar -->
+    <?php include("vendor/inc/sidebar.php"); ?>
 
-    <!-- Stats Row -->
-    <div class="row g-3 mb-4 justify-content-center">
-        <div class="col-4 col-md-3">
-            <div class="stat-card">
-                <div class="stat-number"><?php echo $stats->total_bookings; ?></div>
-                <div class="stat-label">Total Trips</div>
-            </div>
-        </div>
-        <div class="col-4 col-md-3">
-            <div class="stat-card">
-                <div class="stat-number text-success"><?php echo $stats->approved_bookings ?? 0; ?></div>
-                <div class="stat-label">Approved</div>
-            </div>
-        </div>
-        <div class="col-4 col-md-3">
-            <div class="stat-card">
-                <div class="stat-number text-warning"><?php echo $stats->pending_bookings ?? 0; ?></div>
-                <div class="stat-label">Pending</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Info Grid -->
-    <div class="row g-4 mb-5">
-        <div class="col-md-4">
-            <div class="info-card">
-                <div class="info-icon">
-                    <i class="fas fa-envelope"></i>
+    <div class="main-content">
+        <!-- Header -->
+        <div class="content-header">
+            <h2 class="fw-bold text-dark mb-0">My Profile</h2>
+            <div class="d-flex align-items-center">
+                <div class="text-end me-3">
+                    <h6 class="mb-0 text-dark fw-semibold"><?php echo htmlspecialchars($user->first_name . ' ' . $user->last_name); ?></h6>
+                    <small class="text-muted">Employee</small>
                 </div>
-                <div class="info-label">Email Address</div>
-                <div class="info-value"><?php echo htmlspecialchars($user->email); ?></div>
+                <i class="fas fa-user-circle fa-2x text-primary"></i>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="info-card">
-                <div class="info-icon">
-                    <i class="fas fa-phone"></i>
-                </div>
-                <div class="info-label">Contact Number</div>
-                <div class="info-value"><?php echo htmlspecialchars($user->phone); ?></div>
+        
+        <!-- Profile Header -->
+        <div class="profile-header-card">
+            <div class="profile-avatar">
+                <i class="fas fa-user"></i>
             </div>
+            <h3 class="fw-bold mb-1"><?php echo htmlspecialchars($user->first_name . ' ' . $user->last_name); ?></h3>
+            <p class="mb-2 opacity-75">Employee</p>
+            <span class="badge bg-white text-dark rounded-pill px-3 py-2">
+                <i class="fas fa-calendar-alt me-1 text-success"></i> Joined: <?php echo $joinDate; ?>
+            </span>
         </div>
-        <div class="col-md-4">
-            <div class="info-card">
-                <div class="info-icon">
-                    <i class="fas fa-map-marker-alt"></i>
-                </div>
-                <div class="info-label">Address</div>
-                <div class="info-value"><?php echo htmlspecialchars($user->address); ?></div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Actions -->
-    <div class="d-flex justify-content-center gap-3 flex-wrap">
-        <a href="user-update-profile.php" class="btn btn-primary action-btn">
-            <i class="fas fa-user-edit me-2"></i> Update Profile
-        </a>
-        <button class="btn btn-danger action-btn" data-bs-toggle="modal" data-bs-target="#logoutModal">
-            <i class="fas fa-sign-out-alt me-2"></i> Logout
-        </button>
-    </div>
+        <!-- Stats Row -->
+        <div class="row g-3 mb-4 justify-content-center">
+            <div class="col-4 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number"><?php echo $stats->total_bookings; ?></div>
+                    <div class="stat-label">Total Trips</div>
+                </div>
+            </div>
+            <div class="col-4 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number text-success"><?php echo $stats->approved_bookings ?? 0; ?></div>
+                    <div class="stat-label">Approved</div>
+                </div>
+            </div>
+            <div class="col-4 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-number text-warning"><?php echo $stats->pending_bookings ?? 0; ?></div>
+                    <div class="stat-label">Pending</div>
+                </div>
+            </div>
+        </div>
 
-    <!-- Logout Modal -->
-    <div class="modal fade" id="logoutModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header justify-content-center">
-                    <div class="text-center">
-                        <i class="fas fa-sign-out-alt fa-3x text-danger mb-3"></i>
-                        <h5 class="modal-title fw-bold">Ready to Leave?</h5>
+        <!-- Info Grid -->
+        <div class="row g-4 mb-5">
+            <div class="col-md-4">
+                <div class="info-card">
+                    <div class="info-icon">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <div class="info-label">Email Address</div>
+                    <div class="info-value"><?php echo htmlspecialchars($user->email); ?></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="info-card">
+                    <div class="info-icon">
+                        <i class="fas fa-phone"></i>
+                    </div>
+                    <div class="info-label">Contact Number</div>
+                    <div class="info-value"><?php echo htmlspecialchars($user->phone); ?></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="info-card">
+                    <div class="info-icon">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </div>
+                    <div class="info-label">Address</div>
+                    <div class="info-value"><?php echo htmlspecialchars($user->address); ?></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex justify-content-center gap-3 flex-wrap">
+            <a href="user-update-profile.php" class="btn btn-primary action-btn">
+                <i class="fas fa-user-edit me-2"></i> Update Profile
+            </a>
+            <button class="btn btn-danger action-btn" data-bs-toggle="modal" data-bs-target="#logoutModal">
+                <i class="fas fa-sign-out-alt me-2"></i> Logout
+            </button>
+        </div>
+
+        <!-- Logout Modal -->
+        <div class="modal fade" id="logoutModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header justify-content-center">
+                        <div class="text-center">
+                            <i class="fas fa-sign-out-alt fa-3x text-danger mb-3"></i>
+                            <h5 class="modal-title fw-bold">Ready to Leave?</h5>
+                        </div>
+                    </div>
+                    <div class="modal-body text-center">
+                        <p class="text-muted mb-0">Select "Logout" below if you are ready to end your current session.</p>
+                    </div>
+                    <div class="modal-footer justify-content-center">
+                        <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                        <a href="user-dashboard.php?logout=true" class="btn btn-danger rounded-pill px-4 shadow-sm">Logout</a>
                     </div>
                 </div>
-                <div class="modal-body text-center">
-                    <p class="text-muted mb-0">Select "Logout" below if you are ready to end your current session.</p>
-                </div>
-                <div class="modal-footer justify-content-center">
-                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
-                    <a href="user-dashboard.php?logout=true" class="btn btn-danger rounded-pill px-4 shadow-sm">Logout</a>
-                </div>
             </div>
         </div>
     </div>
-
 </div>
 
 <!-- Scripts -->
