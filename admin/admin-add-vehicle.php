@@ -31,6 +31,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_veh'])) {
     $contract_budget = ($v_ownership === 'VENDOR') ? $_POST['contract_budget'] : 0.00;
     $contract_status = ($v_ownership === 'VENDOR') ? $_POST['contract_status'] : 'ACTIVE';
     
+    // Default Driver
+    $default_driver_id = !empty($_POST['default_driver']) ? $_POST['default_driver'] : null;
+    
     // Check if vehicle registration number already exists
     $check_stmt = $mysqli->prepare("SELECT reg_no FROM vehicles WHERE reg_no = ?");
     $check_stmt->bind_param('s', $v_reg_no);
@@ -53,9 +56,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_veh'])) {
                 move_uploaded_file($_FILES["v_dpic"]["tmp_name"], $target_file);
             }
         }
-        $query = "INSERT INTO vehicles (name, reg_no, category, fuel_type, capacity, status, image, ownership_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        
+        // Updated query to include default_driver_id
+        // Note: Assuming 'default_driver_id' column has been added to 'vehicles' table as requested
+        $query = "INSERT INTO vehicles (name, reg_no, category, fuel_type, capacity, status, image, ownership_type, default_driver_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $mysqli->prepare($query);
-        $stmt->bind_param('ssssisss', $v_name, $v_reg_no, $v_category, $v_fuel_type, $v_capacity, $v_status, $v_dpic, $v_ownership);
+        $stmt->bind_param('ssssisssi', $v_name, $v_reg_no, $v_category, $v_fuel_type, $v_capacity, $v_status, $v_dpic, $v_ownership, $default_driver_id);
 
         if ($stmt->execute()) {
             $new_vehicle_id = $stmt->insert_id;
@@ -72,7 +78,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_veh'])) {
                 if ($check_vendor->num_rows > 0) {
                     $check_vendor->bind_result($vendor_id);
                     $check_vendor->fetch();
-                    // Optional: Update vendor details if needed, but usually we just link
                 } else {
                     // Create a new vendor
                     $create_vendor = $mysqli->prepare("INSERT INTO vendors (name, phone, email, address) VALUES (?, ?, ?, ?)");
@@ -128,6 +133,22 @@ if (isset($_SESSION['succ'])) {
 if (isset($_SESSION['err'])) {
     $err = $_SESSION['err'];
     unset($_SESSION['err']);
+}
+
+// Fetch Active Drivers for Dropdown
+$drivers = [];
+$driver_query = "SELECT d.id, u.first_name, u.last_name 
+                 FROM drivers d 
+                 JOIN users u ON d.user_id = u.id 
+                 WHERE d.status = 'ACTIVE'";
+$driver_stmt = $mysqli->prepare($driver_query);
+if ($driver_stmt) {
+    $driver_stmt->execute();
+    $driver_res = $driver_stmt->get_result();
+    while ($d = $driver_res->fetch_object()) {
+        $drivers[] = $d;
+    }
+    $driver_stmt->close();
 }
 ?>
 
@@ -324,6 +345,27 @@ if (isset($_SESSION['err'])) {
                                             </select>
                                         </div>
                                     </div>
+                                    
+                                    <!-- Default Driver Assignment -->
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label class="small font-weight-bold">Default Driver (Optional)</label>
+                                            <div class="input-group">
+                                                <select class="form-control custom-select" name="default_driver" id="default_driver">
+                                                    <option value="">-- Select Existing Driver --</option>
+                                                    <?php foreach ($drivers as $driver): ?>
+                                                        <option value="<?php echo $driver->id; ?>">
+                                                            <?php echo htmlspecialchars($driver->first_name . ' ' . $driver->last_name); ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                                <div class="input-group-append">
+                                                    <a href="admin-add-user.php" class="btn btn-outline-primary" title="Create New Driver"><i class="fas fa-plus"></i></a>
+                                                </div>
+                                            </div>
+                                            <small class="form-text text-muted">Assign a default driver now or create a new one.</small>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <!-- Vendor Specific Fields -->
@@ -445,6 +487,23 @@ if (isset($_SESSION['err'])) {
 <script src="vendor/js/demo/datatables-demo.js"></script>
 <script src="vendor/js/demo/chart-area-demo.js"></script>
 <script src="vendor/js/swal.js"></script>
+
+<!-- Alerts Logic -->
+<?php if ($succ): ?>
+    <script>
+        $(document).ready(function() {
+            swal("Success!", "<?php echo $succ; ?>", "success");
+        });
+    </script>
+<?php endif; ?>
+
+<?php if ($err): ?>
+    <script>
+        $(document).ready(function() {
+            swal("Failed!", "<?php echo $err; ?>", "error");
+        });
+    </script>
+<?php endif; ?>
 
 <script>
     function previewImage(event) {

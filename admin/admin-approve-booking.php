@@ -332,7 +332,7 @@ if (isset($_POST['approve_booking'])) {
             // Fetch Booking Details
             $ret = "SELECT b.id as booking_id, b.from_datetime, b.to_datetime, b.status, b.purpose, b.driver_id, b.pickup_location, b.drop_location, b.created_at, b.vehicle_id,
                            u.first_name, u.last_name, u.email, u.phone, u.address, 
-                           v.name as v_name, v.category as v_category, v.reg_no as v_reg_no, v.capacity as v_capacity, v.fuel_type as v_fuel, v.image as v_image
+                           v.name as v_name, v.category as v_category, v.reg_no as v_reg_no, v.capacity as v_capacity, v.fuel_type as v_fuel, v.image as v_image, v.default_driver_id
                     FROM bookings b
                     JOIN users u ON b.user_id = u.id
                     JOIN vehicles v ON b.vehicle_id = v.id
@@ -360,6 +360,11 @@ if (isset($_POST['approve_booking'])) {
                     }
                     $driver_stmt->close();
                 }
+                
+                // Determine which driver to select by default
+                // 1. If booking already has a driver assigned, use that.
+                // 2. If not, use the vehicle's default driver.
+                $selected_driver_id = $row->driver_id ? $row->driver_id : $row->default_driver_id;
                 
                 $vehicleImage = $projectFolder . 'vendor/img/' . ($row->v_image ?: 'placeholder.png');
                 ?>
@@ -453,6 +458,9 @@ if (isset($_POST['approve_booking'])) {
                                 <div class="card-header"><i class="fas fa-user me-2"></i> Requester</div>
                                 <div class="card-body">
                                     <div class="d-flex align-items-center mb-3">
+                                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 45px; height: 45px;">
+                                            <i class="fas fa-user"></i>
+                                        </div>
                                         <div>
                                             <div class="fw-bold text-dark"><?php echo $row->first_name . ' ' . $row->last_name; ?></div>
                                             <div class="small text-muted"><?php echo $row->email; ?></div>
@@ -460,58 +468,26 @@ if (isset($_POST['approve_booking'])) {
                                     </div>
                                     <div class="info-label">Contact</div>
                                     <div class="info-value"><i class="fas fa-phone me-2 text-muted"></i> <?php echo $row->phone; ?></div>
+                                    <div class="info-label">Address</div>
+                                    <div class="info-value"><i class="fas fa-map-pin me-2 text-muted"></i> <?php echo $row->address; ?></div>
                                 </div>
                             </div>
 
                             <!-- Vehicle Info -->
-                            <div class="card mb-3 shadow-sm border-0">
-                                <div class="card-header bg-white fw-semibold d-flex align-items-center">
-                                    <i class="fas fa-bus text-success me-2"></i>
-                                    Vehicle Information
-                                </div>
-
+                            <div class="card mb-3">
+                                <div class="card-header"><i class="fas fa-bus me-2"></i> Vehicle</div>
                                 <div class="card-body">
-                                    <div class="row align-items-center g-3">
-
-                                        <!-- Vehicle Image -->
-                                        <div class="col-auto">
-                                            <img src="<?php echo $vehicleImage; ?>"
-                                                 class="rounded-3 border"
-                                                 style="width: 220px; height: 110px; object-fit: cover;"
-                                                 alt="Vehicle">
+                                    <div class="d-flex gap-3">
+                                        <img src="<?php echo $vehicleImage; ?>" class="rounded vehicle-thumb" style="width: 80px; height: 80px;">
+                                        <div>
+                                            <div class="fw-bold text-dark"><?php echo $row->v_name; ?></div>
+                                            <div class="badge bg-light text-dark border mb-1"><?php echo $row->v_category; ?></div>
+                                            <div class="small text-muted font-monospace"><?php echo $row->v_reg_no; ?></div>
+                                            <div class="small text-muted mt-1"><i class="fas fa-gas-pump me-1"></i> <?php echo $row->v_fuel; ?> | <i class="fas fa-chair me-1"></i> <?php echo $row->v_capacity; ?></div>
                                         </div>
-
-                                        <!-- Vehicle Details -->
-                                        <div class="col">
-                                            <div class="d-flex flex-wrap align-items-center mb-1">
-                                                <h5 class="mb-0 fw-bold text-dark me-2">
-                                                    <?php echo $row->v_name; ?>
-                                                </h5>
-                                                <span class="badge bg-light text-dark border">
-                        <?php echo $row->v_category; ?>
-                    </span>
-                                            </div>
-
-                                            <div class="text-muted small font-monospace mb-2">
-                                                <?php echo $row->v_reg_no; ?>
-                                            </div>
-
-                                            <div class="d-flex flex-wrap gap-3 small text-muted">
-                                                <div>
-                                                    <i class="fas fa-gas-pump me-1 text-secondary"></i>
-                                                    <?php echo $row->v_fuel; ?>
-                                                </div>
-                                                <div>
-                                                    <i class="fas fa-chair me-1 text-secondary"></i>
-                                                    <?php echo $row->v_capacity; ?> Seats
-                                                </div>
-                                            </div>
-                                        </div>
-
                                     </div>
                                 </div>
                             </div>
-
 
                             <!-- Action Console -->
                             <div class="card">
@@ -522,7 +498,7 @@ if (isset($_POST['approve_booking'])) {
                                         <select name="driver_id" id="driver_select" class="form-select">
                                             <option value="">-- Select Driver --</option>
                                             <?php foreach ($drivers as $driver): ?>
-                                                <option value="<?php echo $driver->id; ?>" class="driver-option" data-driver-id="<?php echo $driver->id; ?>" <?php echo ($row->driver_id == $driver->id) ? 'selected' : ''; ?>>
+                                                <option value="<?php echo $driver->id; ?>" class="driver-option" data-driver-id="<?php echo $driver->id; ?>" <?php echo ($selected_driver_id == $driver->id) ? 'selected' : ''; ?>>
                                                     <?php 
                                                     echo htmlspecialchars($driver->first_name . ' ' . $driver->last_name);
                                                     echo " (Exp: " . $driver->experience_years . "y)";

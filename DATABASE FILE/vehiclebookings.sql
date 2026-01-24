@@ -308,3 +308,8 @@ CREATE INDEX idx_vehicle_status
 
 CREATE INDEX idx_user_email
     ON users(email);
+
+ALTER TABLE vehicles
+    ADD COLUMN default_driver_id INT,
+    ADD CONSTRAINT fk_vehicle_default_driver
+        FOREIGN KEY (default_driver_id) REFERENCES drivers(id) ON DELETE SET NULL;
