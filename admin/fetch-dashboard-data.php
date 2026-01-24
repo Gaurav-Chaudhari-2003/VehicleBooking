@@ -165,11 +165,14 @@ while($row = $upcoming_res->fetch_assoc()) {
 // 11. Recent Bookings Table
 $booking_query = "
     SELECT b.id as booking_id, b.from_datetime, b.to_datetime, b.status, b.created_at,
-           u.first_name as u_fname, u.last_name as u_lname, u.phone as u_phone,
-           v.name as v_name, v.reg_no as v_reg_no
+           u.first_name as u_fname, u.last_name as u_lname, u.phone as u_phone, u.email as u_email,
+           v.name as v_name, v.reg_no as v_reg_no,
+           d_u.first_name as d_fname, d_u.last_name as d_lname, d_u.phone as d_phone
     FROM bookings b
     JOIN users u ON b.user_id = u.id
     JOIN vehicles v ON b.vehicle_id = v.id
+    LEFT JOIN drivers d ON b.driver_id = d.id
+    LEFT JOIN users d_u ON d.user_id = d_u.id
     ORDER BY b.created_at DESC LIMIT 10
 ";
 $booking_res = $mysqli->query($booking_query);

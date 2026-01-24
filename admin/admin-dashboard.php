@@ -296,7 +296,10 @@ $stmt->close();
                 <div class="table-card mt-4">
                     <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-white">
                         <span class="fw-bold text-dark"><i class="fas fa-list me-2 text-secondary"></i> Recent Activity</span>
-                        <a href="admin-dashboard.php" class="btn btn-sm btn-light border rounded-pill px-3 fw-bold">View All</a>
+                        <div class="d-flex gap-2">
+                            <input type="text" id="tableSearch" class="form-control form-control-sm rounded-pill" placeholder="Search..." style="width: 200px;">
+                            <a href="admin-dashboard.php" class="btn btn-sm btn-light border rounded-pill px-3 fw-bold">View All</a>
+                        </div>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-hover mb-0 align-middle" style="font-size: 0.9rem;">
@@ -305,7 +308,8 @@ $stmt->close();
                                     <th class="ps-4 py-3">ID</th>
                                     <th class="py-3">User</th>
                                     <th class="py-3">Vehicle</th>
-                                    <th class="py-3">Dates</th>
+                                    <th class="py-3">Driver</th>
+                                    <th class="py-3">Journey Details</th>
                                     <th class="py-3">Status</th>
                                     <th class="text-end pe-4 py-3">Action</th>
                                 </tr>
@@ -352,19 +356,25 @@ $stmt->close();
                     <div class="col-md-4">
                         <div class="chart-card">
                             <div class="chart-title"><i class="fas fa-trophy text-warning"></i> Top 5 Vehicles</div>
-                            <canvas id="topVehiclesChart" height="250"></canvas>
+                            <div style="height: 250px; position: relative;">
+                                <canvas id="topVehiclesChart"></canvas>
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="chart-card">
                             <div class="chart-title"><i class="fas fa-id-card text-info"></i> Top 5 Drivers</div>
-                            <canvas id="topDriversChart" height="250"></canvas>
+                            <div style="height: 250px; position: relative;">
+                                <canvas id="topDriversChart"></canvas>
+                            </div>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="chart-card">
                             <div class="chart-title"><i class="fas fa-user-tag text-purple"></i> Top 5 Requesters</div>
-                            <canvas id="topUsersChart" height="250"></canvas>
+                            <div style="height: 250px; position: relative;">
+                                <canvas id="topUsersChart"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -550,21 +560,46 @@ $stmt->close();
                     data.bookings.forEach(row => {
                         const statusColors = {'PENDING': 'bg-warning text-dark', 'APPROVED': 'bg-success', 'REJECTED': 'bg-danger', 'CANCELLED': 'bg-secondary'};
                         const badge = statusColors[row.status] || 'bg-secondary';
-                        const dateStr = new Date(row.from_datetime).toLocaleDateString('en-GB', {day:'numeric', month:'short'});
+                        
+                        // Format dates and times
+                        const fromDateObj = new Date(row.from_datetime);
+                        const toDateObj = new Date(row.to_datetime);
+                        
+                        const fromDate = fromDateObj.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'2-digit'});
+                        const fromTime = fromDateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                        
+                        const toDate = toDateObj.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'2-digit'});
+                        const toTime = toDateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                        
+                        let driverHtml = '<span class="text-muted small">Not Assigned</span>';
+                        if (row.d_fname) {
+                            driverHtml = `
+                                <div class="fw-bold small">${row.d_fname} ${row.d_lname}</div>
+                                <div class="text-muted" style="font-size:0.75rem">${row.d_phone}</div>
+                            `;
+                        }
+
                         const html = `
                             <tr>
-                                <td class="ps-4 fw-bold text-muted small">#${row.booking_id}</td>
+                                <td class="ps-4 fw-bold text-muted small">${row.booking_id}</td>
                                 <td>
                                     <div class="d-flex align-items-center">
-                                        <div class="bg-light rounded-circle p-1 me-2"><i class="fas fa-user text-secondary" style="font-size:0.8rem"></i></div>
                                         <div>
                                             <div class="fw-bold small">${row.u_fname} ${row.u_lname}</div>
+                                            <div class="text-muted" style="font-size:0.75rem">${row.u_email} | ${row.u_phone}</div>
                                         </div>
                                     </div>
                                 </td>
-                                <td><div class="fw-bold small">${row.v_name}</div></td>
-                                <td><small class="fw-semibold text-muted">${dateStr}</small></td>
-                                <td><span class="badge ${badge} rounded-pill px-2" style="font-size:0.7rem">${row.status}</span></td>
+                                <td>
+                                    <div class="fw-bold small">${row.v_name}</div>
+                                    <div class="text-muted" style="font-size:0.75rem">${row.v_reg_no}</div>
+                                </td>
+                                <td>${driverHtml}</td>
+                                <td>
+                                    <small class="fw-semibold text-muted d-block">From: ${fromDate} | ${fromTime}</small>
+                                    <small class="fw-semibold text-muted d-block">To: ${toDate} | ${toTime}</small>
+                                </td>
+                                <td><span class="badge ${badge} text-white" style="font-size:0.7rem">${row.status}</span></td>
                                 <td class="text-end pe-4">
                                     <a href="admin-approve-booking.php?booking_id=${row.booking_id}" class="btn btn-sm btn-light border hover-shadow py-0 px-2">
                                         <i class="fas fa-arrow-right text-primary" style="font-size:0.8rem"></i>
@@ -578,6 +613,14 @@ $stmt->close();
             }
         });
     }
+
+    // Search Functionality
+    $('#tableSearch').on('keyup', function() {
+        var value = $(this).val().toLowerCase();
+        $("#recent-bookings-body tr").filter(function() {
+            $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+        });
+    });
 
     $(document).ready(function() {
         initCharts();
