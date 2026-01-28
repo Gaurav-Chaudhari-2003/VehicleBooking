@@ -21,32 +21,41 @@ if (isset($_POST['Usr-login'])) {
     $u_email = trim($_POST['u_email']);
     $u_pwd = $_POST['u_pwd'];
 
-    // Secure login query using prepared statements
-    $stmt = $mysqli->prepare("SELECT id, password FROM users WHERE email = ? AND role = 'EMPLOYEE' AND is_active = 1");
+    // Check for user with the given email, regardless of active status
+    $stmt = $mysqli->prepare("SELECT id, password, is_active FROM users WHERE email = ? AND role IN ('EMPLOYEE', 'DRIVER')");
     $stmt->bind_param("s", $u_email);
     $stmt->execute();
     $result = $stmt->get_result();
 
     if ($user = $result->fetch_assoc()) {
-        // Verify the password hash
+        // User exists, now check password and status
         if (password_verify($u_pwd, $user['password']) || $u_pwd === $user['password']) {
-            $_SESSION['u_id'] = $user['id'];
+            // Password is correct
+            if ($user['is_active'] == 1) {
+                // Account is active, proceed to login
+                $_SESSION['u_id'] = $user['id'];
 
-            // Log user login with IP
-            $ip = $_SERVER['REMOTE_ADDR'];
-            $user_agent = $_SERVER['HTTP_USER_AGENT'];
-            $action = "User Login";
+                // Log user login with IP
+                $ip = $_SERVER['REMOTE_ADDR'];
+                $user_agent = $_SERVER['HTTP_USER_AGENT'];
+                $action = "User Login";
 
-            $log_stmt = $mysqli->prepare("INSERT INTO system_logs(user_id, action, ip, user_agent) VALUES (?, ?, ?, ?)");
-            $log_stmt->bind_param("isss", $user['id'], $action, $ip, $user_agent);
-            $log_stmt->execute();
+                $log_stmt = $mysqli->prepare("INSERT INTO system_logs(user_id, action, ip, user_agent) VALUES (?, ?, ?, ?)");
+                $log_stmt->bind_param("isss", $user['id'], $action, $ip, $user_agent);
+                $log_stmt->execute();
 
-            header("Location: user-dashboard.php");
-            exit();
+                header("Location: user-dashboard.php");
+                exit();
+            } else {
+                // Account is not active
+                $error = "Your account is pending verification. Please contact the administrator.";
+            }
         } else {
+            // Password is incorrect
             $error = "Invalid email or password.";
         }
     } else {
+        // No user found with that email
         $error = "Invalid email or password.";
     }
 }
