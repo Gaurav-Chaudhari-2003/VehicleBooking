@@ -34,6 +34,19 @@ if (isset($_POST['add_user'])) {
     $email = trim($_POST['u_email']);
     $password = $_POST['u_pwd']; // Will hash after OTP verification
     $remark = trim($_POST['remark']);
+    $role = trim($_POST['u_role']); // Get selected role
+    
+    // Driver specific fields
+    $d_license_no = trim($_POST['d_license_no'] ?? '');
+    $d_license_expiry = $_POST['d_license_expiry'] ?? null;
+
+    // Validate role
+    $allowed_roles = ['EMPLOYEE', 'DRIVER'];
+    if (!in_array($role, $allowed_roles)) {
+        $_SESSION['msg'] = ['type' => 'error', 'text' => 'Invalid role selected.'];
+        header("Location: usr-register.php");
+        exit();
+    }
 
     global $mysqli;
     
@@ -60,6 +73,9 @@ if (isset($_POST['add_user'])) {
             'email' => $email,
             'password' => $password, // Plain text, will hash later
             'remark' => $remark,
+            'role' => $role, // Store role
+            'd_license_no' => $d_license_no,
+            'd_license_expiry' => $d_license_expiry,
             'otp' => $otp,
             'otp_expiry' => time() + 600 // 10 minutes expiry
         ];
@@ -114,7 +130,7 @@ if (isset($_POST['verify_otp'])) {
         global $mysqli;
         
         $hashed_password = password_hash($temp_user['password'], PASSWORD_DEFAULT);
-        $role = 'EMPLOYEE';
+        $role = $temp_user['role']; // Use stored role
         $is_active = 0; // Pending admin approval
 
         $query = "INSERT INTO users (first_name, last_name, phone, address, role, email, password, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
@@ -132,6 +148,7 @@ if (isset($_POST['verify_otp'])) {
 
         if ($stmt->execute()) {
             $new_user_id = $mysqli->insert_id;
+            $last_remark_id = null;
             
             // Insert remark if provided
             if (!empty($temp_user['remark'])) {
@@ -140,6 +157,21 @@ if (isset($_POST['verify_otp'])) {
                 $entity_type = 'USER';
                 $remark_stmt->bind_param('siis', $entity_type, $new_user_id, $new_user_id, $temp_user['remark']);
                 $remark_stmt->execute();
+                $last_remark_id = $remark_stmt->insert_id;
+            }
+
+            // If Role is DRIVER, insert into 'drivers' table
+            if ($role === 'DRIVER') {
+                $d_license_no = $temp_user['d_license_no'];
+                $d_license_expiry = $temp_user['d_license_expiry'];
+                if(empty($d_license_expiry)) $d_license_expiry = null;
+                $d_experience = 0; // Default
+                $d_status = 'ACTIVE'; // Default
+
+                $driver_stmt = $mysqli->prepare("INSERT INTO drivers (user_id, license_no, license_expiry, experience_years, status, last_remark_id) VALUES (?, ?, ?, ?, ?, ?)");
+                $driver_stmt->bind_param('issisi', $new_user_id, $d_license_no, $d_license_expiry, $d_experience, $d_status, $last_remark_id);
+                $driver_stmt->execute();
+                $driver_stmt->close();
             }
 
             $_SESSION['msg'] = ['type' => 'success', 'text' => 'Account created successfully! Please wait for admin approval before logging in.'];
@@ -286,6 +318,7 @@ $is_verification = isset($_SESSION['verification_step']) && $_SESSION['verificat
             width: 60%;
             padding: 50px;
             background-color: #fff;
+            position: relative; /* For loader positioning */
         }
 
         .form-title {
@@ -300,14 +333,14 @@ $is_verification = isset($_SESSION['verification_step']) && $_SESSION['verificat
             margin-bottom: 30px;
         }
         
-        .form-floating > .form-control {
+        .form-floating > .form-control, .form-floating > .form-select {
             border-radius: 12px;
             border: 1px solid #e9ecef;
             background-color: #f8f9fa;
             height: 50px;
         }
         
-        .form-floating > .form-control:focus {
+        .form-floating > .form-control:focus, .form-floating > .form-select:focus {
             background-color: #fff;
             border-color: var(--secondary-color);
             box-shadow: 0 0 0 4px rgba(0, 121, 107, 0.1);
@@ -387,10 +420,40 @@ $is_verification = isset($_SESSION['verification_step']) && $_SESSION['verificat
             height: 60px !important;
         }
 
+        /* Loader Overlay */
+        .loader-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: none; /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            border-radius: 0 20px 20px 0;
+        }
+
+        .loader-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         @media (max-width: 991px) {
             .auth-sidebar { width: 100%; padding: 40px 20px; }
             .auth-form-side { width: 100%; padding: 40px 20px; }
             .circle-1 { width: 150px; height: 150px; }
+            .loader-overlay { border-radius: 0 0 20px 20px; }
         }
     </style>
 </head>
@@ -429,6 +492,14 @@ $is_verification = isset($_SESSION['verification_step']) && $_SESSION['verificat
 
         <!-- Form Side -->
         <div class="auth-form-side">
+            
+            <!-- Loader Overlay -->
+            <div class="loader-overlay" id="loader">
+                <div class="text-center">
+                    <div class="loader-spinner mb-3 mx-auto"></div>
+                    <h6 class="text-muted fw-bold">Processing... Please wait</h6>
+                </div>
+            </div>
 
             <?php if (!$is_verification): ?>
             <!-- REGISTRATION FORM -->
@@ -436,7 +507,7 @@ $is_verification = isset($_SESSION['verification_step']) && $_SESSION['verificat
                 <h3 class="form-title">Create Account</h3>
                 <p class="form-subtitle">Fill in your details to register for access.</p>
 
-                <form method="post">
+                <form method="post" onsubmit="showLoader()">
                     <div class="row g-3">
                         <div class="col-md-6">
                             <div class="form-floating">
@@ -466,7 +537,36 @@ $is_verification = isset($_SESSION['verification_step']) && $_SESSION['verificat
 
                         <div class="col-12">
                             <div class="form-floating">
-                                <label for="addr">Residential Address</label>
+                                <label for="role">Role</label>
+                                <select class="form-control" id="role" name="u_role" required onchange="toggleDriverFields()">
+                                    <option value="" selected disabled>Select Role</option>
+                                    <option value="EMPLOYEE">Employee</option>
+                                    <option value="DRIVER">Driver</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Driver Specific Fields -->
+                        <div id="driver-fields" style="display: none;" class="col-12">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="form-floating">
+                                        <label for="license_no">License Number</label>
+                                        <input type="text" id="license_no" name="d_license_no" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-floating">
+                                        <label for="license_expiry">License Expiry Date</label>
+                                        <input type="date" id="license_expiry" name="d_license_expiry" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="form-floating">
+                                <label for="addr">Department / Camp</label>
                                 <input type="text" id="addr" name="u_addr" class="form-control" required>
                             </div>
                         </div>
@@ -514,7 +614,7 @@ $is_verification = isset($_SESSION['verification_step']) && $_SESSION['verificat
                     <span class="fw-bold text-dark"><?php echo htmlspecialchars($_SESSION['temp_user']['email']); ?></span>
                 </p>
                 
-                <form method="post" class="w-100 mx-auto" style="max-width: 400px;">
+                <form method="post" class="w-100 mx-auto" style="max-width: 400px;" onsubmit="showLoader()">
                     <div class="form-group mb-4">
                         <input type="text" name="otp_code" class="form-control otp-input" placeholder="000000" maxlength="6" required autofocus autocomplete="off">
                     </div>
@@ -554,6 +654,27 @@ $is_verification = isset($_SESSION['verification_step']) && $_SESSION['verificat
             input.type = "password";
             icon.classList.remove("fa-eye-slash");
             icon.classList.add("fa-eye");
+        }
+    }
+    
+    function showLoader() {
+        document.getElementById('loader').style.display = 'flex';
+    }
+
+    function toggleDriverFields() {
+        var role = document.getElementById("role").value;
+        var driverFields = document.getElementById("driver-fields");
+        var licenseNo = document.getElementById("license_no");
+        var licenseExpiry = document.getElementById("license_expiry");
+        
+        if (role === "DRIVER") {
+            driverFields.style.display = "block";
+            licenseNo.required = true;
+            licenseExpiry.required = true;
+        } else {
+            driverFields.style.display = "none";
+            licenseNo.required = false;
+            licenseExpiry.required = false;
         }
     }
     

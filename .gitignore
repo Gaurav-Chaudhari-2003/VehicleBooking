@@ -4,3 +4,4 @@
 *.jpg
 *.avif
 /.env
+create_admin.php
