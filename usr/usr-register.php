@@ -535,13 +535,23 @@ $is_verification = isset($_SESSION['verification_step']) && $_SESSION['verificat
                             </div>
                         </div>
 
-                        <div class="col-12">
+                        <div class="col-6">
                             <div class="form-floating">
                                 <label for="role">Role</label>
-                                <select class="form-control" id="role" name="u_role" required onchange="toggleDriverFields()">
+                                <select class="form-control" id="role" name="u_role" required onchange="handleRoleChange()">
                                     <option value="" selected disabled>Select Role</option>
                                     <option value="EMPLOYEE">Employee</option>
                                     <option value="DRIVER">Driver</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="col-6">
+                            <div class="form-floating">
+                                <label for="addr" id="addr-label">Department / Camp</label>
+                                <select class="form-control" id="addr" name="u_addr" required>
+                                    <option value="" selected disabled>Select Department / Camp</option>
+                                    <!-- Options populated by JS -->
                                 </select>
                             </div>
                         </div>
@@ -561,13 +571,6 @@ $is_verification = isset($_SESSION['verification_step']) && $_SESSION['verificat
                                         <input type="date" id="license_expiry" name="d_license_expiry" class="form-control">
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-
-                        <div class="col-12">
-                            <div class="form-floating">
-                                <label for="addr">Department / Camp</label>
-                                <input type="text" id="addr" name="u_addr" class="form-control" required>
                             </div>
                         </div>
 
@@ -661,20 +664,52 @@ $is_verification = isset($_SESSION['verification_step']) && $_SESSION['verificat
         document.getElementById('loader').style.display = 'flex';
     }
 
-    function toggleDriverFields() {
+    function handleRoleChange() {
         var role = document.getElementById("role").value;
         var driverFields = document.getElementById("driver-fields");
         var licenseNo = document.getElementById("license_no");
         var licenseExpiry = document.getElementById("license_expiry");
+        var addrSelect = document.getElementById("addr");
+        var addrLabel = document.getElementById("addr-label");
         
+        // Clear existing options
+        addrSelect.innerHTML = '<option value="" selected disabled>Select Option</option>';
+
         if (role === "DRIVER") {
+            // Show driver fields
             driverFields.style.display = "block";
             licenseNo.required = true;
             licenseExpiry.required = true;
-        } else {
+            
+            // Set Camp options
+            addrLabel.innerText = "Camp";
+            var camps = ["AREA HQ", "MORPAR", "DURGAPUR", "ANANDWAN"];
+            camps.forEach(function(camp) {
+                var option = document.createElement("option");
+                option.value = camp;
+                option.text = camp;
+                addrSelect.appendChild(option);
+            });
+            
+        } else if (role === "EMPLOYEE") {
+            // Hide driver fields
             driverFields.style.display = "none";
             licenseNo.required = false;
             licenseExpiry.required = false;
+            
+            // Set Department options
+            addrLabel.innerText = "Department";
+            var depts = ["ICT", "PMS", "ENV-LAB", "ENV", "MINING", "HR", "EXPLORATION", "GEOMATICS", "CIVIL", "FINANCE", "E&M"];
+            depts.forEach(function(dept) {
+                var option = document.createElement("option");
+                option.value = dept;
+                option.text = dept;
+                addrSelect.appendChild(option);
+            });
+        } else {
+            // Reset if no role selected (though disabled option prevents this mostly)
+            driverFields.style.display = "none";
+            addrLabel.innerText = "Department / Camp";
         }
     }
     
