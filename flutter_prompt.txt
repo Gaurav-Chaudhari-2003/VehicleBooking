@@ -1,0 +1,65 @@
+Act as a Senior Flutter Developer. I need you to help me scaffold and write the code for a "Vehicle Booking System" mobile application.
+
+The backend is already built using PHP and MySQL. The app will communicate with the server via REST APIs.
+
+### 1. Project Configuration
+- **Framework:** Flutter (Latest SDK)
+- **Language:** Dart
+- **State Management:** Provider (or Riverpod, please recommend the best for this scope)
+- **Networking:** Dio (preferred) or Http
+- **Local Storage:** flutter_secure_storage (for saving JWT tokens)
+- **UI Style:** Material 3
+
+### 2. API Configuration
+- **Base URL:** `http://10.0.2.2/vehicle_booking/api` (Use 10.0.2.2 for Android Emulator to access localhost)
+- **Authentication:** Bearer Token. The token must be included in the `Authorization` header for protected routes.
+
+### 3. API Endpoints Reference
+Here are the endpoints available on the server:
+
+**Auth:**
+- `POST /auth/login.php`
+  - Body: `{ "email": "...", "password": "..." }`
+  - Response: `{ "success": true, "data": { "token": "...", "user": { ... } } }`
+- `POST /auth/logout.php` (Requires Token)
+
+**Vehicles:**
+- `GET /vehicles/list.php` (Public)
+  - Returns list of available vehicles with image URLs.
+- `GET /vehicles/detail.php?id={id}` (Public)
+
+**Bookings:**
+- `GET /bookings/list.php` (Requires Token)
+  - Returns list of user's bookings.
+- `GET /bookings/view.php?id={id}` (Requires Token)
+- `POST /bookings/create.php` (Requires Token)
+  - Body: `{ "vehicle_id": 1, "from_datetime": "Y-m-d H:i", "to_datetime": "Y-m-d H:i", "pickup_location": "...", "drop_location": "...", "purpose": "..." }`
+
+### 4. Required Screens & Features
+Please generate the folder structure and the core code for the following:
+
+1.  **Splash Screen:** Check if a token exists in secure storage. If yes, go to Dashboard; otherwise, go to Login.
+2.  **Login Screen:** Email/Password form. On success, save token and user data, then navigate to Dashboard.
+3.  **Dashboard (Home):**
+    - Display a list of vehicles fetched from `/vehicles/list.php`.
+    - Show vehicle image, name, capacity, and fuel type.
+    - Tapping a vehicle goes to the Detail screen.
+    - Sidebar (Drawer) for navigation (Home, My Bookings, Profile, Logout).
+4.  **Vehicle Detail Screen:**
+    - Show full details.
+    - "Book Now" button that opens the Booking Form.
+5.  **Booking Form Screen:**
+    - Date/Time pickers for Start and End journey.
+    - Text fields for Pickup, Drop, and Purpose.
+    - Submit button calls `/bookings/create.php`.
+6.  **My Bookings Screen:**
+    - List previous and active bookings.
+    - Show status badges (Pending, Approved, Rejected).
+
+### 5. Specific Coding Requests
+- Create a singleton `ApiService` class using Dio to handle interceptors (adding the token automatically).
+- Create Data Models (`User`, `Vehicle`, `Booking`) with `fromJson` methods.
+- Handle HTTP errors gracefully (e.g., show a SnackBar on 401 or 500 errors).
+- Ensure the UI is clean and responsive.
+
+Please start by outlining the folder structure and then provide the code for the `ApiService` and the `AuthProvider`.
