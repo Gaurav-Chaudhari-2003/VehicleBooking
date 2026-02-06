@@ -92,7 +92,7 @@ $stmt->close();
             margin-left: 260px; /* Match sidebar width */
         }
 
-        .vehicle-img { height: 200px; object-fit: cover; border-radius: 10px 10px 0 0; }
+        .vehicle-img { height: 200px; object-fit: cover; border-radius: 10px 10px 0 0; cursor: pointer; }
         .vehicle-card { transition: transform 0.3s ease, box-shadow 0.3s ease; border: none; border-radius: 15px; overflow: hidden; background: #fff; box-shadow: 0 5px 15px rgba(0,0,0,0.05); height: 100%; }
         .vehicle-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         .card-body { padding: 20px; }
@@ -203,7 +203,7 @@ $stmt->close();
                 </div>
             <?php else: ?>
                 <?php foreach ($available_vehicles as $row): 
-                    $imagePath = $projectFolder . 'vendor/img/' . ($row->image ?: 'placeholder.png');
+                    $imagePath = $projectFolder . 'vendor/img/vehicles_img/' . ($row->image ?: 'placeholder.png');
                 ?>
                     <!-- Modal -->
                     <div class="modal fade" id="bookModal<?php echo $row->id; ?>" tabindex="-1"
@@ -312,7 +312,7 @@ $stmt->close();
                     <div class="col-md-6 col-lg-4 vehicle-card-wrapper">
                         <div class="vehicle-card h-100">
                             <div class="position-relative">
-                                <img src="<?= $imagePath; ?>" class="card-img-top vehicle-img" alt="<?= $row->name; ?>">
+                                <img src="<?= $imagePath; ?>" class="card-img-top vehicle-img" alt="<?= $row->name; ?>" onclick="openImageModal('<?= $imagePath; ?>')">
                                 <span class="position-absolute top-0 end-0 m-3 badge bg-white text-dark shadow-sm rounded-pill px-3 py-2">
                                     <i class="fas fa-chair text-success me-1"></i> <?= $row->capacity; ?> Seats
                                 </span>
@@ -347,7 +347,7 @@ $stmt->close();
 <!-- Image Zoom Modal -->
 <div class="modal fade" id="imageModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-xl">
-        <div class="modal-content bg-transparent border-0 shadow-none">
+        <div class="modal-content bg-white border-0 shadow-none">
             <div class="modal-body p-0 text-center">
                 <img src="" id="modalImage" class="img-fluid w-100 rounded-3 shadow-lg" style="max-height: 90vh; object-fit: contain;"
                      alt="">
@@ -827,6 +827,12 @@ $stmt->close();
         }
 
         return true;
+    }
+
+    function openImageModal(src) {
+        document.getElementById('modalImage').src = src;
+        var myModal = new bootstrap.Modal(document.getElementById('imageModal'));
+        myModal.show();
     }
 </script>
 

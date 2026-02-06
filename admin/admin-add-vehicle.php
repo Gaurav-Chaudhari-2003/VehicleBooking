@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_veh'])) {
         if (isset($_FILES["v_dpic"]) && $_FILES["v_dpic"]["error"] === 0) {
             $check = getimagesize($_FILES["v_dpic"]["tmp_name"]);
             if ($check !== false) {
-                $target_dir = "../vendor/img/";
+                $target_dir = "../vendor/img/vehicles_img/";
                 $v_dpic = basename($_FILES["v_dpic"]["name"]);
                 $target_file = $target_dir . $v_dpic;
                 move_uploaded_file($_FILES["v_dpic"]["tmp_name"], $target_file);
@@ -449,7 +449,7 @@ if ($driver_stmt) {
                                                 <label class="custom-file-label" for="v_dpic">Choose file...</label>
                                             </div>
                                             <div class="mt-3 text-center">
-                                                <img id="imagePreview" src="../vendor/img/placeholder.png" alt="Image Preview" class="img-thumbnail shadow-sm" style="max-width: 200px; max-height: 150px; display: none;" />
+                                                <img id="imagePreview" src="../vendor/img/vehicles_img/placeholder.png" alt="Image Preview" class="img-thumbnail shadow-sm" style="max-width: 200px; max-height: 150px; display: none;" />
                                             </div>
                                         </div>
                                     </div>

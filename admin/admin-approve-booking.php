@@ -294,7 +294,7 @@ if (isset($_POST['approve_booking'])) {
         .info-label { font-size: 0.75rem; text-transform: uppercase; color: #888; font-weight: 600; margin-bottom: 2px; }
         .info-value { font-size: 0.95rem; font-weight: 500; color: #333; margin-bottom: 10px; }
         
-        .vehicle-thumb { width: 100%; height: 120px; object-fit: cover; border-radius: 10px; }
+        .vehicle-thumb { width: 100%; height: 120px; object-fit: cover; border-radius: 10px; cursor: pointer; }
 
         .card:hover {
             transform: translateY(-2px);
@@ -303,6 +303,9 @@ if (isset($_POST['approve_booking'])) {
         .card img {
             background: #f8f9fa;
         }
+        
+        /* Modal Styles */
+        .modal-content { border-radius: 20px; border: none; box-shadow: 0 15px 40px rgba(0,0,0,0.2); }
 
     </style>
 </head>
@@ -366,7 +369,7 @@ if (isset($_POST['approve_booking'])) {
                 // 2. If not, use the vehicle's default driver.
                 $selected_driver_id = $row->driver_id ? $row->driver_id : $row->default_driver_id;
                 
-                $vehicleImage = $projectFolder . 'vendor/img/' . ($row->v_image ?: 'placeholder.png');
+                $vehicleImage = $projectFolder . 'vendor/img/vehicles_img/' . ($row->v_image ?: 'placeholder.png');
                 ?>
                 
                 <!-- Header -->
@@ -478,7 +481,7 @@ if (isset($_POST['approve_booking'])) {
                                 <div class="card-header"><i class="fas fa-bus me-2"></i> Vehicle</div>
                                 <div class="card-body">
                                     <div class="d-flex gap-3">
-                                        <img src="<?php echo $vehicleImage; ?>" class="rounded vehicle-thumb" style="width: 80px; height: 80px;">
+                                        <img src="<?php echo $vehicleImage; ?>" class="rounded vehicle-thumb" style="width: 80px; height: 80px;" onclick="openImageModal('<?php echo $vehicleImage; ?>')">
                                         <div>
                                             <div class="fw-bold text-dark"><?php echo $row->v_name; ?></div>
                                             <div class="badge bg-light text-dark border mb-1"><?php echo $row->v_category; ?></div>
@@ -488,6 +491,7 @@ if (isset($_POST['approve_booking'])) {
                                     </div>
                                 </div>
                             </div>
+
 
                             <!-- Action Console -->
                             <div class="card">
@@ -530,6 +534,18 @@ if (isset($_POST['approve_booking'])) {
                 </form>
             <?php } ?>
 
+        </div>
+    </div>
+</div>
+
+<!-- Image Zoom Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content bg-white border-0 shadow-none">
+            <div class="modal-body text-center p-0">
+                <img id="modalImage" class="img-fluid rounded-3 shadow-lg" src="" alt="Zoomed Image"
+                     style="max-height: 90vh; object-fit: contain;">
+            </div>
         </div>
     </div>
 </div>
@@ -957,6 +973,12 @@ if (isset($_POST['approve_booking'])) {
             }
         }
 
+    }
+
+    function openImageModal(src) {
+        document.getElementById('modalImage').src = src;
+        var myModal = new bootstrap.Modal(document.getElementById('imageModal'));
+        myModal.show();
     }
 
     document.addEventListener('DOMContentLoaded', function() {

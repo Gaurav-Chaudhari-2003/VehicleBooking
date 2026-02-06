@@ -76,7 +76,7 @@ if (isset($_GET['ajax_filter'])) {
     
     if ($res->num_rows > 0) {
         while ($row = $res->fetch_object()) {
-            $img = !empty($row->image) ? "../vendor/img/" . $row->image : "../vendor/img/placeholder.png";
+            $img = !empty($row->image) ? "../vendor/img/vehicles_img/" . $row->image : "../vendor/img/vehicles_img/placeholder.png";
             $ownership_badge = ($row->ownership_type == 'VENDOR')
                 ? '<span class="badge bg-warning text-dark">Vendor</span>'
                 : '<span class="badge bg-primary">Dept</span>';
@@ -286,7 +286,7 @@ $show_retired = isset($_GET['show_retired']) && $_GET['show_retired'] == 'true';
                         
                         if ($res->num_rows > 0) {
                             while ($row = $res->fetch_object()) {
-                                $img = !empty($row->image) ? "../vendor/img/" . $row->image : "../vendor/img/placeholder.png";
+                                $img = !empty($row->image) ? "../vendor/img/vehicles_img/" . $row->image : "../vendor/img/vehicles_img/placeholder.png";
                                 $ownership_badge = ($row->ownership_type == 'VENDOR')
                                     ? '<span class="badge bg-warning text-dark">Vendor</span>'
                                     : '<span class="badge bg-primary">Dept</span>';

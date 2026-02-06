@@ -187,7 +187,7 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
 
             if ($res->num_rows > 0) {
                 while ($row = $res->fetch_object()) {
-                    $imagePath = $projectFolder . 'vendor/img/' . ($row->v_dpic ?: 'placeholder.png');
+                    $imagePath = $projectFolder . 'vendor/img/vehicles_img/' . ($row->v_dpic ?: 'placeholder.png');
                     
                     // Format Dates
                     $createdDate = date('d M Y, h:i A', strtotime($row->created_at));
@@ -301,7 +301,7 @@ $projectFolder = '/' . basename(dirname(__DIR__)) . '/';
     <!-- Image Zoom Modal -->
     <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-xl">
-            <div class="modal-content bg-transparent border-0 shadow-none">
+            <div class="modal-content bg-white border-0 shadow-none">
                 <div class="modal-body text-center p-0">
                     <img id="modalImage" class="img-fluid rounded-3 shadow-lg" src="" alt="Zoomed Image"
                          style="max-height: 90vh; object-fit: contain;">
