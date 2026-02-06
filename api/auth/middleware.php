@@ -9,6 +9,11 @@ function requireAuth(): false|array|null
     $headers = getallheaders();
     $token = $headers['Authorization'] ?? '';
 
+    // Handle "Bearer <token>" format
+    if (preg_match('/Bearer\s(\S+)/', $token, $matches)) {
+        $token = $matches[1];
+    }
+
     if (!$token) {
         apiResponse(false, "Token missing", null, 401);
     }
