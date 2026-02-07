@@ -5,3 +5,4 @@
 *.avif
 /.env
 create_admin.php
+/prompts/
