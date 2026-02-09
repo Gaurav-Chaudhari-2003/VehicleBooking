@@ -1,65 +1,68 @@
-Act as a Senior Flutter Developer. I need you to help me scaffold and write the code for a "Vehicle Booking System" mobile application.
+You are an expert Flutter developer.
+Create a user profile screen in Flutter that replicates the design and functionality of the provided PHP web page (`user-view-profile.php`).
 
-The backend is already built using PHP and MySQL. The app will communicate with the server via REST APIs.
+### **Design Requirements**
+The screen should have a modern, clean UI similar to the web version:
+1.  **Header:**
+    *   Title: "My Profile"
+    *   User info (Name, Role) and a profile icon.
+2.  **Profile Card:**
+    *   Gradient background (Teal/Green theme).
+    *   Circular avatar icon.
+    *   User Name and Role (e.g., Employee).
+    *   "Joined Date" badge.
+3.  **Statistics Row:**
+    *   Three cards displaying: "Total Trips", "Approved", and "Pending" counts.
+4.  **Info Grid:**
+    *   Cards for Email, Phone, and Address with corresponding icons.
+5.  **Action Buttons:**
+    *   "Update Profile" (Primary color).
+    *   "Logout" (Red/Danger color).
 
-### 1. Project Configuration
-- **Framework:** Flutter (Latest SDK)
-- **Language:** Dart
-- **State Management:** Provider (or Riverpod, please recommend the best for this scope)
-- **Networking:** Dio (preferred) or Http
-- **Local Storage:** flutter_secure_storage (for saving JWT tokens)
-- **UI Style:** Material 3
+### **API Integration Logic**
+To populate this screen, you need to fetch data from the backend.
 
-### 2. API Configuration
-- **Base URL:** `http://10.0.2.2/vehicle_booking/api` (Use 10.0.2.2 for Android Emulator to access localhost)
-- **Authentication:** Bearer Token. The token must be included in the `Authorization` header for protected routes.
+**1. API Endpoint:**
+*   **Endpoint:** `GET /user/profile.php`
 
-### 3. API Endpoints Reference
-Here are the endpoints available on the server:
+**Recommended API Structure:**
+*   **Request:** `GET /api/user/profile.php`
+*   **Headers:** `Authorization: Bearer <token>`
+*   **Response:**
+    ```json
+    {
+      "success": true,
+      "data": {
+        "user": {
+          "first_name": "John",
+          "last_name": "Doe",
+          "email": "john@example.com",
+          "phone": "1234567890",
+          "address": "123 Main St",
+          "role": "EMPLOYEE",
+          "created_at": "2023-01-15"
+        },
+        "stats": {
+          "total_bookings": 12,
+          "approved_bookings": 8,
+          "pending_bookings": 2
+        }
+      }
+    }
+    ```
 
-**Auth:**
-- `POST /auth/login.php`
-  - Body: `{ "email": "...", "password": "..." }`
-  - Response: `{ "success": true, "data": { "token": "...", "user": { ... } } }`
-- `POST /auth/logout.php` (Requires Token)
+**2. Flutter Implementation Details:**
+*   **State Management:** Use `Provider` or `Riverpod` (or `setState` for simplicity) to handle loading, success, and error states.
+*   **Network Calls:** Use `Retrofit` or `http` package.
+*   **UI Components:**
+    *   Use `Card` widgets with `elevation` for the stats and info blocks.
+    *   Use `Container` with `BoxDecoration` for the gradient header.
+    *   Use `Column`, `Row`, and `GridView` (or `Wrap`) for layout.
 
-**Vehicles:**
-- `GET /vehicles/list.php` (Public)
-  - Returns list of available vehicles with image URLs.
-- `GET /vehicles/detail.php?id={id}` (Public)
+**3. Logout Logic:**
+*   Call the `POST /auth/logout.php` endpoint.
+*   Clear local storage (tokens).
+*   Navigate back to the Login screen.
 
-**Bookings:**
-- `GET /bookings/list.php` (Requires Token)
-  - Returns list of user's bookings.
-- `GET /bookings/view.php?id={id}` (Requires Token)
-- `POST /bookings/create.php` (Requires Token)
-  - Body: `{ "vehicle_id": 1, "from_datetime": "Y-m-d H:i", "to_datetime": "Y-m-d H:i", "pickup_location": "...", "drop_location": "...", "purpose": "..." }`
-
-### 4. Required Screens & Features
-Please generate the folder structure and the core code for the following:
-
-1.  **Splash Screen:** Check if a token exists in secure storage. If yes, go to Dashboard; otherwise, go to Login.
-2.  **Login Screen:** Email/Password form. On success, save token and user data, then navigate to Dashboard.
-3.  **Dashboard (Home):**
-    - Display a list of vehicles fetched from `/vehicles/list.php`.
-    - Show vehicle image, name, capacity, and fuel type.
-    - Tapping a vehicle goes to the Detail screen.
-    - Sidebar (Drawer) for navigation (Home, My Bookings, Profile, Logout).
-4.  **Vehicle Detail Screen:**
-    - Show full details.
-    - "Book Now" button that opens the Booking Form.
-5.  **Booking Form Screen:**
-    - Date/Time pickers for Start and End journey.
-    - Text fields for Pickup, Drop, and Purpose.
-    - Submit button calls `/bookings/create.php`.
-6.  **My Bookings Screen:**
-    - List previous and active bookings.
-    - Show status badges (Pending, Approved, Rejected).
-
-### 5. Specific Coding Requests
-- Create a singleton `ApiService` class using Dio to handle interceptors (adding the token automatically).
-- Create Data Models (`User`, `Vehicle`, `Booking`) with `fromJson` methods.
-- Handle HTTP errors gracefully (e.g., show a SnackBar on 401 or 500 errors).
-- Ensure the UI is clean and responsive.
-
-Please start by outlining the folder structure and then provide the code for the `ApiService` and the `AuthProvider`.
+**Task:**
+Write the complete Flutter code for the `UserProfileScreen` widget and the necessary data models. Assume a `UserRepository` exists for fetching data.
